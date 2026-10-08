@@ -1,0 +1,1272 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Facturación, pagos y cobro — Claro Colombia</title>
+<link rel="preload" href="fuentes/nunitosans.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fuentes/nunito.woff2" as="font" type="font/woff2" crossorigin>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
+<style>
+@font-face{font-family:"Nunito";src:url("fuentes/nunito.woff2") format("woff2");font-weight:700 900;font-display:swap}
+@font-face{font-family:"Nunito Sans";src:url("fuentes/nunitosans.woff2") format("woff2");font-weight:400 800;font-display:swap}
+
+/* === TOKENS (mismos del tablero CR UMM) === */
+:root{
+  color-scheme:light;
+  --claro:#DA101A; --claro-osc:#B00D16; --claro-velo:#FFF6F6;
+  --tinta:#1B1D22; --tinta-2:#4F5664; --tenue:#7D8492; --linea:#E2E5EA; --linea-2:#EEF0F3;
+  --plano:#F2F4F6; --carta:#FFFFFF; --neutro:#C9CDD5; --ambar:#D9A441; --verde:#0A7339; --cielo:#17191E;
+  --mal:#B3121B; --mal-f:#FDEAEA; --medio:#7A5200; --medio-f:#FFF1C7; --bien:#0A7339; --bien-f:#E1F3E7;
+  --radio:12px;
+  --f-titulo:"Nunito","Nunito Sans",system-ui,sans-serif;
+  --f-ui:"Nunito Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --flecha:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%234F5664' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--plano);color:var(--tinta);font:400 13px/1.45 var(--f-ui);height:100vh;height:100dvh;min-height:760px;
+  display:flex;flex-direction:column;overflow:hidden;-webkit-font-smoothing:antialiased}
+button,select,input{font:inherit}
+:focus-visible{outline:2px solid var(--claro);outline-offset:2px}
+
+/* === BANNER: la imagen manda la altura (1920 px de ancho → 134 px) === */
+.banner{position:relative;flex:none;line-height:0;background:var(--carta)}
+.banner img{display:block;width:100%;height:auto}
+.banner h1{position:absolute;top:50%;left:max(29%,calc(20% + 172px));transform:translateY(-50%);margin:0;white-space:nowrap;
+  font:900 2.3vw/1 var(--f-titulo);letter-spacing:.015em;color:var(--tinta)}
+.banner h1 em{font-style:normal;color:var(--claro)}
+.sello{position:absolute;left:20%;top:50%;transform:translateY(-50%);line-height:1.25;padding-left:16px;
+  border-left:1px solid rgba(27,29,34,.18);display:grid;gap:1px}
+.sello span{font:700 10.5px/1.2 var(--f-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--tinta-2)}
+.sello strong{font:800 16px/1.2 var(--f-ui);color:var(--tinta)}
+.sello small{font-size:11.5px;color:var(--tinta-2)}
+
+/* === VISTAS Y CONTEXTO === */
+.barra{flex:none;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 24px;background:var(--carta);border-bottom:1px solid var(--linea)}
+nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+.tab{position:relative;flex:none;height:46px;padding:0 14px;border:0;background:none;color:var(--tinta-2);font:700 13.5px/1 var(--f-ui);cursor:pointer;white-space:nowrap}
+.tab:hover{color:var(--tinta)}
+.tab.active{color:var(--tinta);font-weight:800}
+.tab.active::after{content:"";position:absolute;left:14px;right:14px;bottom:0;height:3px;border-radius:3px 3px 0 0;background:var(--claro)}
+.tab:focus-visible{outline-offset:-2px}
+.ctx{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;align-items:center;padding:8px 0;min-width:0}
+.ctx .n{font-size:12.5px;color:var(--tinta-2);margin-right:4px;white-space:nowrap}
+.ctx .n b{color:var(--tinta);font-weight:800}
+.pill{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 6px 0 10px;border:1px solid #F1C4C6;border-radius:999px;background:var(--claro-velo);
+  color:var(--claro-osc);font:700 11.5px/1 var(--f-ui);white-space:nowrap}
+.pill button{width:16px;height:16px;padding:0;border:0;border-radius:50%;background:none;color:inherit;font:700 14px/1 var(--f-ui);cursor:pointer}
+.pill button:hover{background:var(--claro);color:#fff}
+
+/* === FILTROS === */
+.filtros{flex:none;display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 14px;padding:12px 24px 0}
+.filtro{display:grid;gap:4px;min-width:0}
+.filtro>span{font:700 10.5px/1.2 var(--f-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--tinta-2)}
+select{appearance:none;height:34px;padding:0 30px 0 11px;border:1px solid #D7DBE1;border-radius:8px;background:#fff var(--flecha) no-repeat right 11px center;
+  font:600 13px/1 var(--f-ui);color:var(--tinta);cursor:pointer;text-overflow:ellipsis}
+.filtro select,.filtro input{width:190px}
+.filtro input{height:34px;padding:0 11px;border:1px solid #D7DBE1;border-radius:8px;background:#fff;font:600 13px/1 var(--f-ui);color:var(--tinta)}
+select:hover,.filtro input:hover{border-color:#B9BFC8}
+select.activo,.filtro input.activo{border-color:var(--claro);background-color:var(--claro-velo);font-weight:800}
+.conmuta{display:inline-flex;align-items:center;gap:2px;height:34px;padding:3px;border:1px solid #D7DBE1;border-radius:999px;background:var(--carta)}
+#f-meses{display:contents}
+.chip{height:26px;padding:0 11px;border:0;border-radius:999px;background:none;color:var(--tinta-2);font:700 12px/1 var(--f-ui);cursor:pointer;white-space:nowrap}
+.chip:hover{color:var(--tinta);background:var(--plano)}
+.chip.on{background:var(--claro);color:#fff;box-shadow:0 2px 6px rgba(218,16,26,.25)}
+.limpiar{margin-left:auto;height:34px;padding:0 14px;border:1px solid #D7DBE1;border-radius:8px;background:#fff;color:var(--tinta);
+  font:700 12.5px/1 var(--f-ui);cursor:pointer;white-space:nowrap}
+.limpiar:hover:not(:disabled){border-color:var(--claro);color:var(--claro)}
+.limpiar:disabled{opacity:.45;cursor:default}
+.limpiar+.descarga{margin-left:0}
+.descarga{position:relative}
+.descarga summary{list-style:none;display:flex;align-items:center}
+.descarga summary::-webkit-details-marker{display:none}
+.descarga>div{position:absolute;right:0;top:38px;z-index:20;display:grid;min-width:170px;max-height:320px;overflow:auto;padding:4px;
+  background:#fff;border:1px solid var(--linea);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+.descarga>div button{padding:8px 10px;border:0;border-radius:6px;background:none;text-align:left;font:600 13px/1 var(--f-ui);color:var(--tinta);cursor:pointer}
+.descarga>div button:hover{background:var(--claro-velo);color:var(--claro)}
+
+/* === ESCENARIO === */
+.stage{flex:1;min-height:0;display:flex;flex-direction:column;padding:14px 24px 0;min-width:0}
+.view{display:none;flex:1;min-height:0;flex-direction:column}
+.view.active{display:flex}
+@media (prefers-reduced-motion:no-preference){.view.active{animation:sube .35s cubic-bezier(.2,.8,.2,1)}@keyframes sube{from{opacity:0;transform:translateY(6px)}}}
+.view-body{flex:1;min-height:0;overflow:auto;padding-bottom:14px;scrollbar-width:thin;scrollbar-color:#CDD2D9 transparent}
+footer{flex:none;display:flex;flex-wrap:wrap;justify-content:space-between;column-gap:24px;padding:6px 24px 10px;font-size:11px;color:var(--tenue)}
+footer b{color:var(--tinta-2)}
+
+/* === TARJETAS === */
+.grid{display:grid;gap:14px}
+.card{background:var(--carta);border:1px solid var(--linea);border-radius:var(--radio);padding:14px 18px 12px;min-width:0}
+.card h2{font:800 15px/1.2 var(--f-titulo);letter-spacing:-.005em;margin:0 0 4px}
+.card .sub{font-size:12px;color:var(--tenue);margin:0 0 6px;line-height:1.4}
+.chart{width:100%;height:280px}
+.note{font-size:11.5px;color:var(--tenue);line-height:1.45;margin-top:6px}
+.empty{font-size:13px;color:var(--tinta-2);padding:40px 12px;text-align:center}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:minmax(0,1.2fr) repeat(5,minmax(0,1fr));gap:14px;margin-bottom:14px}
+.kpi{background:var(--carta);border:1px solid var(--linea);border-radius:var(--radio);padding:13px 16px 11px;min-width:0;overflow:hidden;
+  display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto 1fr auto;column-gap:10px;row-gap:2px}
+.kpi h2{font:800 12px/1.2 var(--f-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--tinta-2);margin:0;white-space:nowrap}
+.kpi .valor{grid-column:1;align-self:center;font:800 clamp(24px,1.7vw,34px)/1.1 var(--f-ui);letter-spacing:-.02em;white-space:nowrap;font-variant-numeric:tabular-nums}
+.kpi .valor.low{color:var(--tenue)}
+.kpi .chispa{grid-column:2;grid-row:1/3;align-self:center;width:clamp(56px,4.8vw,96px);height:40px}
+.kpi .pie{grid-column:1/3;display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--tinta-2);white-space:nowrap;overflow:hidden}
+.kpi.lead{border-color:#F1C4C6;box-shadow:inset 0 3px 0 var(--claro)}
+.kpi.lead .valor{font-size:clamp(28px,2.1vw,40px)}
+.var{display:inline-block;flex:none;padding:2px 7px;border-radius:999px;font-size:10.5px;font-weight:800;line-height:1.35;white-space:nowrap}
+.var.mejora{color:var(--bien);background:var(--bien-f)}
+.var.empeora{color:var(--mal);background:var(--mal-f)}
+.var.neutro{color:var(--tinta-2);background:var(--linea-2)}
+
+/* lectura del periodo */
+.insights{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:12px}
+.insights li{position:relative;padding-left:18px;font-size:13px;line-height:1.5;color:var(--tinta-2)}
+.insights li::before{content:"";position:absolute;left:2px;top:.5em;width:8px;height:8px;border-radius:50%;background:var(--neutro)}
+.insights li.neg::before{background:var(--claro)}
+.insights li.pos::before{background:var(--verde)}
+.insights b{color:var(--tinta);font-weight:800;font-variant-numeric:tabular-nums}
+
+/* selector dentro de una vista (mismo control que «Mensual / Diario» en CR UMM) */
+.picker{display:inline-flex;flex-wrap:wrap;gap:2px;padding:3px;border:1px solid var(--linea);border-radius:999px;background:var(--carta)}
+.picker button{height:28px;padding:0 13px;border:0;border-radius:999px;background:none;color:var(--tinta-2);font:700 12px/1 var(--f-ui);cursor:pointer}
+.picker button:hover{color:var(--tinta)}
+.picker button.on{background:var(--claro);color:#fff;box-shadow:0 2px 6px rgba(218,16,26,.25)}
+.picker.sm button{height:24px;padding:0 11px;font-size:11.5px}
+
+/* === RECORRIDO: factura → pago → cobro === */
+.ribbon{display:grid;grid-template-columns:4fr 3fr 2fr;gap:14px;margin-bottom:14px}
+.phase{display:flex;flex-direction:column;gap:8px;min-width:0}
+.phase-name{display:flex;align-items:center;gap:10px;font:800 11px/1 var(--f-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--claro)}
+.phase-name::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,#F1C4C6,var(--linea))}
+.steps{display:flex;gap:8px}
+.step{flex:1;min-width:0;position:relative;overflow:hidden;background:var(--carta);border:1px solid var(--linea);border-radius:10px;padding:12px 14px 15px}
+.step .sl{font-size:12px;color:var(--tinta-2);line-height:1.3;min-height:31px}
+.step .sv{font:800 26px/1.1 var(--f-ui);letter-spacing:-.02em;margin-top:4px;font-variant-numeric:tabular-nums}
+.step .si{font-size:11px;color:var(--tenue);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.step .si b{color:var(--tinta)}
+.step .bar{position:absolute;left:0;right:0;bottom:0;height:4px;background:var(--linea-2)}
+.step .bar span{display:block;height:100%}
+.step.info{background:var(--plano);border-style:dashed}
+.step.info .sv{color:var(--tenue)}
+
+/* === CONSTELACIÓN: lienzo a todo el ancho, panel flotante encima === */
+.sky-body{display:flex;flex-direction:column}
+.sky{position:relative;flex:1;min-height:560px;border-radius:var(--radio);overflow:hidden}
+.sky-lienzo{position:absolute;inset:0;background:radial-gradient(ellipse 75% 85% at 40% 50%,#2A2D35 0%,#1B1D22 48%,var(--cielo) 100%)}
+.sky-svg{display:block;width:100%;height:100%;user-select:none;-webkit-user-select:none}
+.astro{fill:#fff;opacity:.3;animation:titila 4s ease-in-out infinite}
+@keyframes titila{0%,100%{opacity:.1}50%{opacity:.8}}
+.orbita{fill:none;stroke:rgba(255,255,255,.09);stroke-dasharray:2 7;animation:gira 50s linear infinite}
+@keyframes gira{to{stroke-dashoffset:-270}}
+.enlace{stroke:#E3E5EA;stroke-linecap:round}
+.nodo{cursor:pointer;outline:none}
+.nodo .halo{transform-box:fill-box;transform-origin:center}
+.nodo.sel .halo{animation:late 1.8s ease-in-out infinite}
+@keyframes late{50%{transform:scale(1.4);opacity:.34}}
+.nodo:hover .cuerpo,.nodo:focus-visible .cuerpo,.nodo.sel .cuerpo{stroke:#fff;stroke-width:2.5}
+.rotulo{font:600 11.5px var(--f-ui);fill:#D5D8DE;paint-order:stroke;stroke:rgba(23,25,30,.9);stroke-width:3px;stroke-linejoin:round;pointer-events:none}
+.k-hub .rotulo{font-weight:800;font-size:13px;fill:#fff}
+.nodo:hover .rotulo,.nodo:focus-visible .rotulo,.nodo.sel .rotulo{fill:#fff}
+.centro-v{font:900 17px var(--f-titulo);fill:#fff;text-anchor:middle;pointer-events:none}
+.centro-k{font:800 8.5px var(--f-ui);letter-spacing:.12em;fill:rgba(255,255,255,.8);text-anchor:middle;pointer-events:none}
+.onda{fill:none;stroke:var(--claro);stroke-width:2;transform-box:fill-box;transform-origin:center;animation:onda 3.4s cubic-bezier(.2,.6,.3,1) infinite}
+.onda+.onda{animation-delay:1.7s}
+@keyframes onda{from{transform:scale(1);opacity:.75}to{transform:scale(2.7);opacity:0}}
+@media (prefers-reduced-motion:reduce){.astro,.orbita,.onda,.nodo.sel .halo{animation:none}}
+
+.sky-ctl{position:absolute;top:16px;left:16px;z-index:2;display:flex;gap:8px;flex-wrap:wrap}
+.sky .picker{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.sky .picker button{color:#C3C8D0}
+.sky .picker button:hover{color:#fff}
+.sky .picker button.on{color:#fff}
+.sky-legend{position:absolute;left:18px;bottom:14px;z-index:2;font-size:11px;color:#A3A9B4;display:flex;gap:16px;align-items:center;flex-wrap:wrap;pointer-events:none}
+.sky-legend .scale{width:110px;height:6px;border-radius:3px;background:linear-gradient(90deg,#FF3B44,#E7A33E,#34C19A)}
+
+.panel{position:absolute;top:16px;right:16px;bottom:16px;z-index:2;width:360px;padding:18px 18px 14px;overflow:auto;display:flex;flex-direction:column;gap:12px;
+  background:rgba(27,29,34,.74);border:1px solid rgba(255,255,255,.09);border-radius:14px;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  color:#E3E5EA;scrollbar-width:thin;scrollbar-color:#3A3E47 transparent}
+.panel h3{font:800 20px/1.2 var(--f-titulo);margin:0;color:#fff}
+.panel .kind{font:800 10.5px/1.2 var(--f-ui);text-transform:uppercase;letter-spacing:.08em;color:#FF5A61}
+.panel .note{color:#A3A9B4}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{background:rgba(255,255,255,.06);padding:9px 11px;border-radius:8px}
+.stat .k{font-size:11px;color:#A3A9B4}
+.stat .v{font:800 20px/1.2 var(--f-ui);letter-spacing:-.01em;color:#fff;font-variant-numeric:tabular-nums}
+.quote{border-left:3px solid rgba(255,255,255,.18);padding:4px 0 4px 10px;font-size:12.5px;line-height:1.5;color:#D5D8DE}
+.quote.det{border-color:#FF3B44} .quote.pro{border-color:#34C19A} .quote.neu{border-color:#E7A33E}
+.quote small{display:block;font-size:10.5px;color:#8B93A1;margin-top:2px}
+@media (prefers-reduced-motion:no-preference){
+  .panel>*{animation:aparece .45s cubic-bezier(.2,.8,.2,1) both}
+  .panel>:nth-child(2){animation-delay:.04s}.panel>:nth-child(3){animation-delay:.08s}.panel>:nth-child(4){animation-delay:.12s}.panel>:nth-child(5){animation-delay:.16s}
+  @keyframes aparece{from{opacity:0;transform:translateY(8px)}}
+}
+.tip{position:fixed;z-index:30;pointer-events:none;background:#fff;border:1px solid var(--linea);border-radius:10px;box-shadow:0 8px 24px rgba(16,24,40,.18);
+  padding:9px 12px;font-size:12px;line-height:1.45;color:var(--tinta-2);max-width:300px}
+.tip b{color:var(--tinta)}
+
+/* === COMENTARIOS === */
+.card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.vtools{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 10px}
+.vtools input{flex:1 1 240px;min-width:0;height:34px;padding:0 11px;border:1px solid #D7DBE1;border-radius:8px;background:#fff;font:600 13px/1 var(--f-ui);color:var(--tinta)}
+.vtools select{min-width:0;max-width:100%}
+.vlist{display:flex;flex-direction:column}
+.vrow{display:grid;grid-template-columns:36px minmax(0,1fr);gap:12px;padding:11px 2px;border-top:1px solid var(--linea-2)}
+.score{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;font:800 14px/1 var(--f-ui)}
+.score.det{background:var(--mal-f);color:var(--mal)} .score.neu{background:var(--medio-f);color:var(--medio)} .score.pro{background:var(--bien-f);color:var(--bien)}
+.vmeta{font-size:11px;color:var(--tenue);margin-bottom:3px}
+.vtext{font-size:13px;line-height:1.5}
+.vextra{font-size:12px;color:var(--tinta-2);margin-top:3px;line-height:1.45}
+.vextra em{font-style:normal;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--tenue);margin-right:6px}
+.more{display:block;margin:10px auto 0;height:32px;padding:0 16px;border:1px solid #D7DBE1;border-radius:8px;background:#fff;color:var(--tinta);font:700 12.5px/1 var(--f-ui);cursor:pointer}
+.more:hover{border-color:var(--claro);color:var(--claro)}
+
+/* === RESPONSIVE === */
+@media (max-width:1500px){
+  .sello{display:none}
+  .banner h1{left:50%;transform:translate(-50%,-50%)}
+}
+@media (max-width:1300px){
+  body{height:auto;min-height:0;overflow:auto}
+  .stage,.view-body{overflow:visible}
+  .g2,.g21,.g12{grid-template-columns:1fr!important}
+  .ribbon{grid-template-columns:1fr}
+  .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (max-width:1100px){
+  .sky{flex:none;min-height:0;overflow:visible}
+  .sky-lienzo{position:relative;height:560px;border-radius:var(--radio);overflow:hidden}
+  .panel{position:static;width:auto;margin-top:14px;background:var(--cielo)}
+}
+@media (max-width:900px){
+  .banner img{height:72px;object-fit:cover;object-position:12% 50%}
+  .banner h1{position:static;transform:none;white-space:normal;padding:14px 16px 4px;font-size:24px;line-height:1.15}
+  .barra{flex-direction:column;align-items:stretch;gap:0;padding:0 16px}
+  .ctx{justify-content:flex-start;padding-top:0}
+  .filtros,.stage,footer{padding-left:16px;padding-right:16px}
+  .filtro{flex:1 1 100%}
+  .filtro select,.filtro input{width:100%}
+  .conmuta{flex-wrap:wrap;height:auto;border-radius:12px}
+  .limpiar{margin-left:0;width:100%}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .steps{flex-wrap:wrap}.step{flex:1 1 45%}
+}
+@media (max-width:520px){.kpis{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="banner">
+  <img src="banner.webp" width="3840" height="269" alt="Claro">
+  <div class="sello"><span>Actualizado</span><strong id="actualizado">—</strong><small id="corte"></small></div>
+  <h1>FACTURACIÓN<em>,</em> PAGOS <em>Y</em> COBRO</h1>
+</header>
+
+<div class="barra">
+  <nav aria-label="Vistas">
+    <button class="tab active" data-view="resumen">Resumen</button>
+    <button class="tab" data-view="segmentos">Tendencias y segmentos</button>
+    <button class="tab" data-view="recorrido">Recorrido y drivers</button>
+    <button class="tab" data-view="constelacion">Constelación de motivos</button>
+    <button class="tab" data-view="voz">Emociones y comentarios</button>
+  </nav>
+  <div class="ctx" aria-live="polite"></div>
+</div>
+
+<form class="filtros" aria-label="Filtros del tablero" onsubmit="return false">
+  <div class="filtro"><span>Negocio</span><div class="conmuta" id="f-neg"></div></div>
+  <div class="filtro"><span>Mes</span><div class="conmuta"><button type="button" class="chip" id="f-meses-all">Todos</button><span id="f-meses"></span></div></div>
+  <label class="filtro"><span>Región</span><select id="f-region"></select></label>
+  <div class="filtro"><span>Tipo de estudio</span><div class="conmuta" id="f-base"></div></div>
+  <label class="filtro"><span>Canal de pago</span><select id="f-canal"></select></label>
+  <label class="filtro"><span>Ciudad o zona</span><input id="f-ciudad" list="ciudades" placeholder="Escribe para buscar"><datalist id="ciudades"></datalist></label>
+  <div class="filtro"><span>Segmento NPS</span><div class="conmuta" id="f-seg"></div></div>
+  <button type="button" class="limpiar" id="f-clear">Limpiar filtros</button>
+  <details class="descarga"><summary class="limpiar">Descargar base ▾</summary><div id="d-meses"></div></details>
+</form>
+
+<main class="stage">
+  <!-- 1 · RESUMEN -->
+  <section class="view active" id="v-resumen">
+    <div class="view-body">
+      <div class="kpis" id="kpis"></div>
+      <div class="grid g21" style="grid-template-columns:1.65fr 1fr">
+        <div class="card"><h2>Evolución mensual</h2><div class="chart" id="c-evo" style="height:290px"></div></div>
+        <div class="card"><h2>Lectura del periodo</h2><ul class="insights" id="insights"></ul><p class="note" id="nota-parcial"></p></div>
+        <div class="card"><h2>Composición del NPS por mes</h2><div class="chart" id="c-comp" style="height:240px"></div></div>
+        <div class="card"><h2>Distribución de la calificación 0 a 10</h2><div class="chart" id="c-dist" style="height:240px"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · SEGMENTOS -->
+  <section class="view" id="v-segmentos">
+    <div class="view-body">
+      <div class="picker" id="p-ind" style="margin-bottom:14px"></div>
+      <div class="grid g2" style="grid-template-columns:1.25fr 1fr">
+        <div class="card"><h2>Región por mes</h2><p class="sub">En gris, celdas con menos de 30 encuestas.</p><div class="chart" id="c-heat" style="height:290px"></div></div>
+        <div class="card"><h2>Facturación frente a Cobranza</h2><div class="chart" id="c-base" style="height:290px"></div></div>
+        <div class="card"><h2>Canal de pago</h2><p class="sub">Cobranza y parte de Facturación Móvil no traen canal de pago: aparecen como «Sin dato».</p><div class="chart" id="c-canal" style="height:250px"></div></div>
+        <div class="card"><h2>Ciudad o zona</h2><p class="sub">Con 30 encuestas o más.</p><div style="max-height:250px;overflow:auto"><div class="chart" id="c-ciudad"></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · RECORRIDO -->
+  <section class="view" id="v-recorrido">
+    <div class="view-body">
+      <div class="ribbon" id="ribbon"></div>
+      <div class="grid g12" style="grid-template-columns:1.4fr 1fr">
+        <div class="card"><h2>Matriz de drivers</h2><p class="sub">Desempeño (% que responde favorable) frente a impacto en el NPS: cuánto podría subir el NPS general, como máximo, si quienes responden desfavorable se comportaran como quienes responden favorable.</p><div class="chart" id="c-drivers" style="height:330px"></div><p class="note">Arriba a la izquierda quedan los pasos que funcionan peor y más le restan al NPS: son los primeros a atender.</p></div>
+        <div class="card"><h2>NPS según el número de fricciones</h2><p class="sub">Fricción: un paso del recorrido con respuesta desfavorable.</p><div class="chart" id="c-fric" style="height:330px"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · CONSTELACIÓN -->
+  <section class="view" id="v-constelacion">
+    <div class="view-body sky-body">
+      <div class="sky">
+        <div class="sky-lienzo">
+          <svg class="sky-svg" id="c-sky" aria-label="Constelación de motivos"></svg>
+          <div class="sky-ctl"><div class="picker" id="p-const" aria-label="Indicador"></div><div class="picker" id="p-mode" aria-label="Qué mostrar en la constelación"></div></div>
+          <div class="sky-legend"><span id="sky-size"></span><span style="display:flex;gap:6px;align-items:center">NPS <span id="sky-lo"></span> <span class="scale"></span> <span id="sky-hi"></span></span><span>Clic en un punto para abrirlo · en el centro, para cerrar todo</span></div>
+        </div>
+        <aside class="panel" id="panel" aria-live="polite"></aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 · VOZ -->
+  <section class="view" id="v-voz">
+    <div class="view-body">
+      <div class="grid g2" style="grid-template-columns:1.2fr 1fr;margin-bottom:14px">
+        <div class="card"><h2>Emociones por parte del proceso</h2><p class="sub">% de emociones negativas (izquierda) y positivas (derecha) entre quienes nombraron una emoción.</p><div class="chart" id="c-emo" style="height:300px"></div></div>
+        <div class="card"><div class="card-head"><div><h2 id="mot-title">Motivos de los detractores</h2><p class="sub">Clic en un motivo para ver sus comentarios.</p></div><div class="picker sm" id="p-motseg"></div></div><div class="chart" id="c-det" style="height:300px"></div></div>
+      </div>
+      <div class="card">
+        <h2>Comentarios</h2>
+        <p class="sub">Sin nombres ni datos de contacto. Las cifras de 5 o más dígitos se reemplazan por [#].</p>
+        <div class="vtools"><input id="v-q" type="search" placeholder="Buscar en los comentarios"><select id="v-seg" aria-label="Segmento"></select><select id="v-mot" aria-label="Motivo"></select></div>
+        <div class="vlist" id="vlist"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span>NPS: % promotores (9 y 10) menos % detractores (0 a 6). SAT y CES: % que califica 4 o 5. Las diferencias van en pp. Clic en una gráfica para filtrar.</span>
+  <span id="foot"></span>
+</footer>
+<div class="tip" id="tip" role="tooltip" hidden></div>
+
+<script>
+const MES_C = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MES_L = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+// si la base cruza de año, el mes corto lleva el año ("Ene 27")
+let VARIOS_ANIOS = false;
+const mc = m => MES_C[+m.slice(5) - 1] + (VARIOS_ANIOS ? ' ' + m.slice(2, 4) : ''), ml = m => MES_L[+m.slice(5) - 1] + (VARIOS_ANIOS ? ' ' + m.slice(0, 4) : '');
+const MIN_N = 30;
+const POS = new Set(['Tranquilidad','Satisfacción','Confianza','Seguridad','Felicidad','Alegría']);
+const NEG = new Set(['Molesto','Insatisfacción','Enojo','Decepción','Frustración','Rabia','Disgusto','Impotente']);
+const CSS = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const COL = {red:CSS('--claro'), redDeep:CSS('--claro-osc'), ink:CSS('--tinta'), steel:CSS('--tinta-2'), soft:CSS('--tenue'),
+  line:CSS('--linea'), green:CSS('--verde'), amber:CSS('--ambar'), paper:CSS('--plano'), neutro:CSS('--neutro')};
+
+const IND = {
+  nps:  {label:'NPS',         q:'nps', color:COL.red},
+  sat:  {label:'SAT factura', q:'p1',  color:COL.ink},
+  ces:  {label:'CES factura', q:'p2',  color:COL.green},
+  satp: {label:'SAT pago',    q:'p5',  color:COL.soft},
+  cesp: {label:'CES pago',    q:'p6',  color:COL.amber},
+  satc: {label:'SAT cobro',   q:'p9',  color:COL.redDeep},
+};
+const STEPS = [
+  {k:'p1', fase:'Factura', label:'Satisfacción con la factura', fav:v => v >= 4},
+  {k:'p2', fase:'Factura', label:'Entender la factura',        fav:v => v >= 4},
+  {k:'p3', fase:'Factura', label:'Valores acordes al plan',    fav:v => v === 1},
+  {k:'p4', fase:'Factura', label:'Llega a tiempo para pagar',  fav:v => v === 1},
+  {k:'p5', fase:'Pago',    label:'Satisfacción con el pago',   fav:v => v >= 4},
+  {k:'p6', fase:'Pago',    label:'Facilidad para pagar',       fav:v => v >= 4},
+  {k:'p7', fase:'Pago',    label:'Claridad del proceso de pago', fav:v => v >= 4},
+  {k:'p8', fase:'Cobro',   label:'Recibió recordatorio de pago', fav:v => v === 1, info:true},
+  {k:'p9', fase:'Cobro',   label:'Satisfacción con el cobro',  fav:v => v >= 4},
+];
+const CONST = {
+  nps: {label:'NPS', help:'Motivos que dieron los clientes al calificar su recomendación.', quien:'los clientes',
+        groups:[{hub:null, f:'m112', vb:'nps'}]},
+  sat: {label:'SAT', help:'Motivos de quienes calificaron 1 o 2 la factura, el pago o el cobro.', quien:'quienes dieron un motivo de insatisfacción',
+        groups:[{hub:'Factura', f:'m11', sub:'m12', vb:'proc'}, {hub:'Pago', f:'m51', vb:'pag'}, {hub:'Cobro', f:'m91', vb:'cob'}]},
+  ces: {label:'CES', help:'Lo que les costó a los clientes: entender la factura, los valores, pagar y la claridad del proceso.', quien:'quienes dieron un motivo de dificultad',
+        groups:[{hub:'Entender la factura', f:'m21', vb:'fac'}, {hub:'Valores errados', f:'m31', vb:'val'}, {hub:'Pagar la factura', f:'m61', vb:'dif'}, {hub:'Claridad del pago', f:'m71', sub:'m72', vb:'cla'}]},
+};
+const VB_LABEL = {nps:'Recomendación', proc:'Proceso', fac:'Factura', val:'Valores', pag:'Pago', dif:'Dificultad al pagar', cob:'Cobro', cla:'Claridad'};
+
+let META, ROWS, VIEW = 'resumen', IND_SEG = 'nps', CONST_K = 'nps', SKY_MODE = 'motivos', VB_LIMIT = 40, NODE_SEL = null;
+const F = {neg:'', meses:new Set(), region:'', base:'', canal:'', ciudad:'', seg:''};
+
+// ---------- utilidades ----------
+const fmt = (v, d = 1) => v == null || isNaN(v) ? '–' : v.toLocaleString('es-CO', {minimumFractionDigits:d, maximumFractionDigits:d});
+const fmtI = (k, v) => v == null ? '–' : fmt(v) + '%';  // el NPS también se lee en %
+const pp = (v, d = 1) => v == null ? '–' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${fmt(Math.abs(v), d)} pp`;  // diferencias: puntos porcentuales
+// el último mes cargado del negocio elegido es el corte vigente: se marca con su fecha de cierre
+const deNeg = () => F.neg ? ROWS.filter(r => r.neg === F.neg) : ROWS;
+const ultimo = () => deNeg().reduce((a, r) => r.mes > a ? r.mes : a, '');
+const rango = m => { const d = deNeg().filter(r => r.mes === m).map(r => r.fecha); return [Math.min(...d), Math.max(...d)]; };
+const corte = () => `corte al ${rango(ultimo())[1]} de ${ml(ultimo())}`;
+const pct = (a, b) => b ? a / b * 100 : null;
+const segOf = s => s >= 9 ? 'Promotor' : s >= 7 ? 'Neutro' : 'Detractor';
+const segCls = s => s >= 9 ? 'pro' : s >= 7 ? 'neu' : 'det';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const count = (arr, fn) => { const m = new Map(); for (const r of arr) { const k = fn(r); if (k != null) m.set(k, (m.get(k) || 0) + 1); } return m; };
+
+function npsOf(rs) {
+  if (!rs.length) return null;
+  let p = 0, d = 0;
+  for (const r of rs) { if (r.nps >= 9) p++; else if (r.nps <= 6) d++; }
+  return (p - d) / rs.length * 100;
+}
+function calc(k, rs) {
+  if (k === 'nps') return {v:npsOf(rs), n:rs.length};
+  const q = IND[k].q; let n = 0, t = 0;
+  for (const r of rs) if (r[q] != null) { n++; if (r[q] >= 4) t++; }
+  return {v:pct(t, n), n};
+}
+// filtra con todos los filtros activos menos los que se nombren (para gráficas que muestran ese mismo corte)
+function filt(...skip) {
+  const on = k => !skip.includes(k);
+  return ROWS.filter(r =>
+    (!on('neg') || !F.neg || r.neg === F.neg) &&
+    (!on('meses') || !F.meses.size || F.meses.has(r.mes)) &&
+    (!on('region') || !F.region || r.region === F.region) &&
+    (!on('base') || !F.base || r.base === F.base) &&
+    (!on('canal') || !F.canal || r.canal === F.canal) &&
+    (!on('ciudad') || !F.ciudad || r.ciudad === F.ciudad) &&
+    (!on('seg') || !F.seg || segOf(r.nps) === F.seg));
+}
+const byMonth = rs => { const m = {}; for (const mm of META.meses) m[mm] = []; for (const r of rs) m[r.mes].push(r); return m; };
+
+// color continuo rojo → ámbar → verde para un NPS entre -60 y 60
+function npsColor(v, glow = true) {
+  const stops = glow ? ['#FF3B44', '#E7A33E', '#34C19A'] : [COL.red, '#D9A441', COL.green];
+  const t = Math.max(0, Math.min(1, ((v ?? 0) + 60) / 120));
+  const [a, b, u] = t < .5 ? [stops[0], stops[1], t * 2] : [stops[1], stops[2], (t - .5) * 2];
+  const h = s => [1, 3, 5].map(i => parseInt(s.slice(i, i + 2), 16));
+  const A = h(a), B = h(b);
+  return '#' + A.map((x, i) => Math.round(x + (B[i] - x) * u).toString(16).padStart(2, '0')).join('');
+}
+
+// ---------- echarts ----------
+const CH = {};
+// mismo globo que el tablero CR UMM: blanco, borde fino y sombra suave
+const TOOLTIP = {backgroundColor:'#fff', borderColor:COL.line, borderWidth:1, padding:[9, 12], textStyle:{color:COL.steel, fontFamily:'Nunito Sans', fontSize:12},
+  extraCssText:'border-radius:10px;box-shadow:0 8px 24px rgba(16,24,40,.12)'};
+const AX = {axisLine:{lineStyle:{color:COL.line}}, axisTick:{show:false}, axisLabel:{color:COL.soft, fontFamily:'Nunito Sans', fontSize:11}, splitLine:{lineStyle:{color:'#EEF0F3'}}};
+function chart(id, opt, onClick) {
+  const el = document.getElementById(id);
+  let c = CH[id];
+  if (!c || c.getDom() !== el) { c = CH[id] = echarts.init(el, null, {renderer:'canvas'}); }
+  c.setOption({textStyle:{fontFamily:'Nunito Sans'}, tooltip:TOOLTIP, animationDuration:600, ...opt}, true);
+  c.off('click');
+  if (onClick) c.on('click', onClick);
+  return c;
+}
+addEventListener('resize', () => Object.values(CH).forEach(c => c.getDom().offsetParent && c.resize()));
+
+// ---------- filtros ----------
+function setF(k, v) { F[k] = F[k] === v ? '' : v; render(); }
+function setMes(m, solo = true) {
+  if (solo) F.meses = F.meses.size === 1 && F.meses.has(m) ? new Set() : new Set([m]);
+  else F.meses.has(m) ? F.meses.delete(m) : F.meses.add(m);
+  render();
+}
+function buildFilters() {
+  const uniq = k => [...new Set(ROWS.map(r => r[k]).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+  document.getElementById('f-meses').innerHTML = META.meses.map(m => `<button type="button" class="chip" data-m="${m}" aria-pressed="false">${mc(m)}</button>`).join('');
+  document.getElementById('f-meses').onclick = e => { const m = e.target.dataset.m; if (m) setMes(m, false); };
+  document.getElementById('f-meses-all').onclick = () => { F.meses.clear(); render(); };
+  const opts = (id, k, all) => {
+    const el = document.getElementById(id);
+    el.innerHTML = `<option value="">${all}</option>` + uniq(k).map(v => `<option>${esc(v)}</option>`).join('');
+    el.onchange = () => { F[k] = el.value; render(); };
+  };
+  opts('f-region', 'region', 'Todas las regiones');
+  opts('f-canal', 'canal', 'Todos los canales');
+  const seg = (id, k, vals) => {
+    const el = document.getElementById(id);
+    el.innerHTML = vals.map(([v, t]) => `<button type="button" class="chip" data-v="${v}">${t}</button>`).join('');
+    el.onclick = e => { const b = e.target.closest('button'); if (b) { F[k] = b.dataset.v; render(); } };
+  };
+  seg('f-neg', 'neg', [['', 'General'], ['Hogar', 'Hogar'], ['Móvil', 'Móvil']]);
+  seg('f-base', 'base', [['', 'Todos'], ['Facturación', 'Facturación'], ['Cobranza', 'Cobranza']]);
+  seg('f-seg', 'seg', [['', 'Todos'], ['Promotor', 'Prom.'], ['Neutro', 'Neutro'], ['Detractor', 'Detr.']]);
+  document.getElementById('ciudades').innerHTML = uniq('ciudad').map(v => `<option value="${esc(v)}">`).join('');
+  const ci = document.getElementById('f-ciudad');
+  ci.onchange = () => { const v = ci.value.trim(); F.ciudad = ROWS.some(r => r.ciudad === v) ? v : ''; if (!F.ciudad) ci.value = ''; render(); };
+  document.getElementById('f-clear').onclick = () => { Object.assign(F, {neg:'', meses:new Set(), region:'', base:'', canal:'', ciudad:'', seg:''}); render(); };
+}
+function syncFilters(rs) {
+  document.querySelectorAll('#f-meses .chip').forEach(b => { const on = F.meses.has(b.dataset.m); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+  document.getElementById('f-meses-all').classList.toggle('on', !F.meses.size);
+  for (const k of ['region', 'canal', 'ciudad']) { const el = document.getElementById('f-' + k); el.value = F[k]; el.classList.toggle('activo', !!F[k]); }
+  document.querySelectorAll('#f-neg .chip').forEach(b => b.classList.toggle('on', b.dataset.v === F.neg));
+  document.querySelectorAll('#f-base .chip').forEach(b => b.classList.toggle('on', b.dataset.v === F.base));
+  const c = corte();
+  document.getElementById('corte').textContent = c[0].toUpperCase() + c.slice(1);
+  document.querySelectorAll('#f-seg .chip').forEach(b => b.classList.toggle('on', b.dataset.v === F.seg));
+  const pills = [];
+  if (F.meses.size) pills.push(['meses', [...F.meses].sort().map(mc).join(', ')]);
+  for (const k of ['neg', 'region', 'base', 'canal', 'ciudad', 'seg']) if (F[k]) pills.push([k, F[k]]);
+  document.getElementById('f-clear').disabled = !pills.length;
+  const html = `<span class="n"><b>${rs.length.toLocaleString('es-CO')}</b> encuestas</span>` +
+    pills.map(([k, t]) => `<span class="pill">${esc(t)}<button data-k="${k}" aria-label="Quitar filtro ${esc(t)}">×</button></span>`).join('');
+  document.querySelectorAll('.ctx').forEach(c => {
+    c.innerHTML = html;
+    c.onclick = e => { const k = e.target.dataset.k; if (!k) return; k === 'meses' ? F.meses.clear() : (F[k] = ''); render(); };
+  });
+}
+
+// ---------- vistas ----------
+const VIEWS = {resumen:vResumen, segmentos:vSegmentos, recorrido:vRecorrido, constelacion:vConst, voz:vVoz};
+function render() {
+  const rs = filt();
+  syncFilters(rs);
+  const body = document.querySelector(`#v-${VIEW} .view-body`);
+  const empty = body.querySelector(':scope > .empty');
+  if (!rs.length) {
+    body.querySelectorAll(':scope > *').forEach(n => n.hidden = true);
+    if (!empty) body.insertAdjacentHTML('afterbegin', '<p class="empty">No hay encuestas con estos filtros. Quita alguno para ver datos.</p>');
+    return;
+  }
+  if (empty) empty.remove();
+  body.querySelectorAll(':scope > *').forEach(n => n.hidden = false);
+  VIEWS[VIEW](rs);
+}
+
+// prev/actual: último mes del filtro contra el mes anterior de la base
+function compareMonths(rs) {
+  const ms = [...new Set(rs.map(r => r.mes))].sort();
+  const cur = ms.at(-1), i = META.meses.indexOf(cur);
+  return {cur, prev: i > 0 ? META.meses[i - 1] : null};
+}
+
+// chispa como en CR UMM: la serie del año y un punto en el último mes con dato
+function spark(vals, color) {
+  const W = 96, H = 40, p = 5, pts = vals.map((v, i) => [i, v]).filter(x => x[1] != null);
+  if (pts.length < 2) return '';
+  const ys = pts.map(x => x[1]), lo = Math.min(...ys), hi = Math.max(...ys), w = vals.length - 1 || 1;
+  const P = pts.map(([x, y]) => [p + x / w * (W - 2 * p), H - p - (hi > lo ? (y - lo) / (hi - lo) : .5) * (H - 2 * p)]);
+  const [lx, ly] = P.at(-1);
+  return `<svg class="chispa" viewBox="0 0 ${W} ${H}" aria-hidden="true"><polyline points="${P.join(' ')}" fill="none" stroke="${color}" stroke-opacity=".6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${lx}" cy="${ly}" r="4" fill="${color}" stroke="#fff" stroke-width="2"/></svg>`;
+}
+
+function vResumen(rs) {
+  const all = filt('meses'), bm = byMonth(all);
+  const {cur, prev} = compareMonths(rs);
+  document.getElementById('kpis').innerHTML = Object.entries(IND).map(([k, ind], i) => {
+    const {v, n} = calc(k, rs);
+    const a = calc(k, bm[cur] || []).v, b = prev ? calc(k, bm[prev]).v : null;
+    const d = a != null && b != null && bm[prev].length >= MIN_N && bm[cur].length >= MIN_N ? a - b : null;
+    const cls = d == null ? '' : d > .05 ? 'mejora' : d < -.05 ? 'empeora' : 'neutro';
+    const arrow = cls === 'mejora' ? '▲ ' : cls === 'empeora' ? '▼ ' : '';
+    return `<article class="kpi ${i ? '' : 'lead'}" title="${ind.label}: ${k === 'nps' ? '% promotores (9-10) menos % detractores (0-6)' : k === 'satc' ? '% que califica 4 o 5, entre quienes recibieron recordatorio' : '% que califica 4 o 5'}">
+      <h2>${ind.label}</h2>
+      ${spark(META.meses.map(m => calc(k, bm[m]).v), i ? COL.steel : COL.red)}
+      <div class="valor ${n < MIN_N ? 'low' : ''}">${fmtI(k, v)}</div>
+      <div class="pie">${d == null ? '' : `<span class="var ${cls}">${arrow}${pp(d)}</span> vs ${ml(prev)} ·`} n ${n.toLocaleString('es-CO')}</div></article>`;
+  }).join('');
+
+  // evolutivo
+  const ms = META.meses, sel = m => !F.meses.size || F.meses.has(m);
+  chart('c-evo', {
+    legend:{top:0, left:0, itemWidth:14, itemHeight:3, textStyle:{color:COL.steel, fontSize:11}, data:Object.values(IND).map(i => i.label),
+      selected:{'SAT pago':false, 'CES pago':false, 'SAT cobro':false}},
+    grid:{left:38, right:40, top:44, bottom:26},
+    tooltip:{...TOOLTIP, trigger:'axis', valueFormatter:v => v == null ? '–' : fmt(v) + '%'},
+    xAxis:{type:'category', data:ms.map(m => mc(m) + (m === ultimo() ? '*' : '')), ...AX},
+    yAxis:[{type:'value', ...AX, min:v => Math.min(0, Math.floor(v.min / 10) * 10), max:100},
+           {type:'value', ...AX, splitLine:{show:false}, axisLabel:{show:false}, max:v => v.max * 3.2}],
+    series:[
+      {name:'Encuestas', type:'bar', yAxisIndex:1, barWidth:'38%', z:1, tooltip:{show:false},
+       data:ms.map(m => ({value:bm[m].length, itemStyle:{color:sel(m) ? '#DCDFE5' : '#EEF0F3'}})),
+      },
+      ...Object.entries(IND).map(([k, ind]) => ({
+        name:ind.label, type:'line', smooth:.25, symbolSize:7, z:3, connectNulls:false,
+        lineStyle:{width:k === 'nps' ? 3 : 2, color:ind.color, type:k === 'satc' ? 'dashed' : 'solid'}, itemStyle:{color:ind.color},
+        emphasis:{focus:'series'},
+        endLabel:{show:k === 'nps', formatter:p => fmt(p.value) + '%', color:ind.color, fontFamily:'Nunito Sans', fontWeight:700, fontSize:11},
+        data:ms.map(m => bm[m].length >= MIN_N ? +calc(k, bm[m]).v?.toFixed(1) : null),
+      })),
+    ],
+  }, p => setMes(ms[p.dataIndex]));
+
+  // composición
+  const segs = [['Detractor', COL.red], ['Neutro', '#C9CDD5'], ['Promotor', COL.green]];
+  chart('c-comp', {
+    grid:{left:42, right:8, top:28, bottom:24}, legend:{top:0, left:0, itemWidth:10, itemHeight:10, textStyle:{color:COL.steel, fontSize:11}},
+    tooltip:{...TOOLTIP, trigger:'axis', valueFormatter:v => fmt(v) + '%'},
+    xAxis:{type:'category', data:ms.map(mc), ...AX}, yAxis:{type:'value', max:100, ...AX, axisLabel:{...AX.axisLabel, formatter:'{value}%'}},
+    series:segs.map(([s, c]) => ({name:s, type:'bar', stack:'t', barWidth:'58%', itemStyle:{color:c},
+      label:{show:s !== 'Neutro', formatter:p => p.value >= 12 ? Math.round(p.value) : '', color:s === 'Neutro' ? COL.ink : '#fff', fontSize:10, fontFamily:'Nunito Sans'},
+      data:ms.map(m => pct(bm[m].filter(r => segOf(r.nps) === s).length, bm[m].length))})),
+  }, p => setF('seg', p.seriesName));
+
+  // distribución 0-10
+  const dist = Array.from({length:11}, (_, i) => rs.filter(r => r.nps === i).length);
+  chart('c-dist', {
+    grid:{left:46, right:8, top:14, bottom:24},
+    tooltip:{...TOOLTIP, formatter:p => `Calificación ${p.name}: ${p.value.toLocaleString('es-CO')} (${fmt(pct(p.value, rs.length))}%)`},
+    xAxis:{type:'category', data:dist.map((_, i) => String(i)), ...AX}, yAxis:{type:'value', ...AX},
+    series:[{type:'bar', barWidth:'64%', data:dist.map((v, i) => ({value:v, itemStyle:{color:i >= 9 ? COL.green : i >= 7 ? '#C9CDD5' : COL.red}}))}],
+  }, p => setF('seg', segOf(+p.name)));
+
+  document.getElementById('insights').innerHTML = insights(rs).map(([c, t]) => `<li class="${c}">${t}</li>`).join('');
+  const u = ultimo();
+  document.getElementById('nota-parcial').textContent =
+    `* ${ml(u)[0].toUpperCase() + ml(u).slice(1)}: ${corte()} (${rango(u)[0]} al ${rango(u)[1]}). Los meses con menos de 30 encuestas no se grafican.`;
+}
+
+function stepStats(rs) {
+  return STEPS.map(s => {
+    const has = rs.filter(r => r[s.k] != null), f = has.filter(r => s.fav(r[s.k])), nf = has.filter(r => !s.fav(r[s.k]));
+    const imp = f.length >= MIN_N && nf.length >= MIN_N ? npsOf(f) - npsOf(nf) : null;
+    // techo: NPS general ganado si los no favorables pasaran a comportarse como los favorables
+    const mov = imp == null ? null : imp * nf.length / rs.length;
+    return {...s, n:has.length, fav:pct(f.length, has.length), imp, mov, nNo:nf.length};
+  });
+}
+function frictions(r) { return STEPS.filter(s => !s.info && r[s.k] != null && !s.fav(r[s.k])).length; }
+
+function insights(rs) {
+  const out = [], q = t => `«${t}»`;
+  const {cur, prev} = compareMonths(rs), bm = byMonth(filt('meses'));
+  const a = bm[cur], b = prev && bm[prev];
+  if (a.length >= MIN_N) {
+    const va = npsOf(a), nota = cur === ultimo() ? ` (${corte()})` : '';
+    if (b && b.length >= MIN_N) {
+      const vb = npsOf(b), d = va - vb;
+      out.push([d >= 0 ? 'pos' : 'neg', Math.abs(d) < .05
+        ? `El NPS de ${ml(cur)}${nota} fue <b>${fmt(va)}%</b>, igual que en ${ml(prev)}.`
+        : `El NPS de ${ml(cur)}${nota} fue <b>${fmt(va)}%</b>: <b>${fmt(Math.abs(d))} pp</b> ${d > 0 ? 'más' : 'menos'} que en ${ml(prev)} (<b>${fmt(vb)}%</b>).`]);
+    } else out.push(['', `El NPS de ${ml(cur)}${nota} fue <b>${fmt(va)}%</b>.`]);
+  }
+  const st = stepStats(rs).filter(s => !s.info && s.n >= MIN_N);
+  if (st.length) {
+    const weak = st.reduce((x, y) => y.fav < x.fav ? y : x);
+    out.push(['neg', `El paso más débil del recorrido es ${q(weak.label.toLowerCase())}: solo el <b>${fmt(weak.fav)}%</b> responde favorable.`]);
+  }
+  const det = rs.filter(r => r.nps <= 6);
+  if (det.length >= MIN_N) {
+    const [m, n] = [...count(det, r => r.m112)].sort((x, y) => y[1] - x[1])[0] || [];
+    if (m) out.push(['neg', `Entre los detractores, el motivo que más se repite es ${q(m)} (<b>${fmt(pct(n, det.length))}%</b> de ellos).`]);
+  }
+  const f0 = rs.filter(r => frictions(r) === 0), f3 = rs.filter(r => frictions(r) >= 3);
+  if (f0.length >= MIN_N && f3.length >= MIN_N)
+    out.push(['neg', `Sin fricciones en el recorrido el NPS es <b>${fmt(npsOf(f0))}%</b>; con tres o más cae a <b>${fmt(npsOf(f3))}%</b>.`]);
+  return out;
+}
+
+function picker(id, cur, items, onPick) {
+  const el = document.getElementById(id);
+  el.innerHTML = items.map(([k, t]) => `<button data-k="${k}" class="${k === cur ? 'on' : ''}" aria-pressed="${k === cur}">${t}</button>`).join('');
+  el.onclick = e => { const b = e.target.closest('button'); if (b) onPick(b.dataset.k); };
+}
+
+function vSegmentos(rs) {
+  picker('p-ind', IND_SEG, Object.entries(IND).map(([k, v]) => [k, v.label]), k => { IND_SEG = k; render(); });
+  const k = IND_SEG, isN = k === 'nps', ms = META.meses;
+  const vfmt = v => fmtI(k, v);
+  const range = isN ? [-30, 50] : [45, 95];
+
+  // heatmap región x mes (ignora el filtro de mes y región para mostrar el mapa completo)
+  const noRegMes = filt('meses', 'region');
+  const regs = [...new Set(noRegMes.map(r => r.region).filter(Boolean))].sort().reverse();
+  const ok = [], low = [];
+  regs.forEach((g, y) => ms.forEach((m, x) => {
+    const sub = noRegMes.filter(r => r.region === g && r.mes === m), c = calc(k, sub);
+    const mid = (range[0] + range[1]) / 2, dark = c.v != null && Math.abs(c.v - mid) > (range[1] - range[0]) * .3;
+    (c.n >= MIN_N ? ok : low).push({value:[x, y, c.v == null ? '-' : +c.v.toFixed(1)], n:c.n, label:{color:dark ? '#fff' : COL.ink}});
+  }));
+  chart('c-heat', {
+    grid:{left:96, right:10, top:6, bottom:46},
+    tooltip:{...TOOLTIP, formatter:p => `${regs[p.value[1]]} · ${ml(ms[p.value[0]])}<br>${IND[k].label}: <b>${p.value[2] === '-' ? '–' : vfmt(p.value[2])}</b> · n ${p.data.n}`},
+    xAxis:{type:'category', data:ms.map(mc), ...AX, splitArea:{show:false}}, yAxis:{type:'category', data:regs, ...AX},
+    visualMap:{seriesIndex:0, min:range[0], max:range[1], calculable:false, orient:'horizontal', left:'center', bottom:0, itemWidth:10, itemHeight:120,
+      text:[vfmt(range[1]), vfmt(range[0])], textStyle:{fontSize:10, color:COL.steel, fontFamily:'Nunito Sans'},
+      inRange:{color:[COL.red, '#F2D49B', COL.green]}},
+    series:[
+      {type:'heatmap', data:ok, itemStyle:{borderColor:'#fff', borderWidth:2},
+       label:{show:true, formatter:p => fmt(p.value[2]), fontFamily:'Nunito Sans', fontSize:11, fontWeight:700}},
+      {type:'heatmap', data:low.map(d => ({...d, label:undefined, value:[d.value[0], d.value[1], d.value[2] === '-' ? 0 : d.value[2]], raw:d.value[2]})), itemStyle:{color:'#ECEEF2', borderColor:'#fff', borderWidth:2},
+       label:{show:true, formatter:p => p.data.n ? fmt(p.data.value[2]) : '', fontFamily:'Nunito Sans', fontSize:10, color:COL.soft}},
+    ],
+  }, p => { F.region = regs[p.value[1]]; F.meses = new Set([ms[p.value[0]]]); render(); });
+
+  // facturación vs cobranza
+  const nb = filt('base');
+  const bases = ['Facturación', 'Cobranza'], bcol = {Facturación:COL.ink, Cobranza:COL.red};
+  chart('c-base', {
+    grid:{left:40, right:16, top:30, bottom:24}, legend:{top:0, left:0, itemWidth:14, itemHeight:3, textStyle:{color:COL.steel, fontSize:11}},
+    tooltip:{...TOOLTIP, trigger:'axis', valueFormatter:v => v == null ? '–' : vfmt(v)},
+    xAxis:{type:'category', data:ms.map(mc), ...AX}, yAxis:{type:'value', ...AX, scale:true},
+    series:bases.map(b => ({name:b, type:'line', smooth:.25, symbolSize:7, lineStyle:{width:F.base && F.base !== b ? 1.5 : 3, color:bcol[b], opacity:F.base && F.base !== b ? .35 : 1}, itemStyle:{color:bcol[b]},
+      data:ms.map(m => { const s = nb.filter(r => r.base === b && r.mes === m); return s.length >= MIN_N ? +calc(k, s).v?.toFixed(1) : null; })})),
+  }, p => setF('base', p.seriesName));
+
+  // canal de pago
+  const nc = filt('canal');
+  const canales = [...count(nc, r => r.canal || 'Sin dato')].map(([c, n]) => [c, n, calc(k, nc.filter(r => (r.canal || 'Sin dato') === c)).v]).sort((x, y) => (y[2] ?? -999) - (x[2] ?? -999));
+  chart('c-canal', barH(canales, k, F.canal), p => p.name !== 'Sin dato' && setF('canal', p.name));
+
+  // ciudades
+  const nci = filt('ciudad');
+  const cities = [...count(nci, r => r.ciudad)].filter(x => x[1] >= MIN_N).map(([c, n]) => [c, n, calc(k, nci.filter(r => r.ciudad === c)).v]).sort((x, y) => (y[2] ?? -999) - (x[2] ?? -999));
+  document.getElementById('c-ciudad').style.height = Math.max(120, cities.length * 22 + 30) + 'px';
+  if (CH['c-ciudad']) CH['c-ciudad'].resize();
+  chart('c-ciudad', barH(cities, k, F.ciudad), p => setF('ciudad', p.name));
+}
+
+function barH(items, k, selected) {
+  const isN = k === 'nps';
+  return {
+    grid:{left:150, right:70, top:6, bottom:6},
+    tooltip:{...TOOLTIP, formatter:p => `${p.name}<br>${IND[k].label}: <b>${fmtI(k, p.value)}</b> · n ${items[p.dataIndex][1].toLocaleString('es-CO')}`},
+    xAxis:{type:'value', show:false, min:isN ? Math.min(0, ...items.map(i => i[2] ?? 0)) - 5 : 0, max:isN ? undefined : 100},
+    yAxis:{type:'category', inverse:true, data:items.map(i => i[0]), ...AX, axisLine:{show:false},
+      axisLabel:{...AX.axisLabel, fontFamily:'Nunito Sans', fontSize:11.5, color:COL.ink, width:140, overflow:'truncate'}},
+    series:[{type:'bar', barWidth:13, data:items.map(i => ({value:i[2] == null ? null : +i[2].toFixed(1),
+        itemStyle:{color:npsColor(isN ? i[2] : (i[2] - 75) * 3, false), opacity:selected && selected !== i[0] ? .35 : 1}})),
+      label:{show:true, position:'right', fontFamily:'Nunito Sans', fontSize:10.5, color:COL.steel,
+        formatter:p => `${fmtI(k, p.value)}  n${items[p.dataIndex][1]}`}}],
+  };
+}
+
+function vRecorrido(rs) {
+  const st = stepStats(rs);
+  const fases = ['Factura', 'Pago', 'Cobro'];
+  document.getElementById('ribbon').innerHTML = fases.map(f => `<div class="phase"><div class="phase-name">${f}</div><div class="steps">` +
+    st.filter(s => s.fase === f).map(s => {
+      const c = s.info ? COL.soft : npsColor((s.fav - 75) * 3);
+      return `<div class="step ${s.info ? 'info' : ''}" title="${s.label}: n ${s.n}">
+        <div class="sl">${s.label}</div>
+        <div class="sv">${s.n >= MIN_N ? fmt(s.fav, 0) + '%' : '–'}</div>
+        <div class="si">${s.info ? 'Informativo' : s.imp == null ? 'Impacto: base baja' : `<span title="Techo teórico: NPS general ganado si los clientes con respuesta desfavorable pasaran a comportarse como los favorables (brecha ${pp(s.imp, 0)} × % desfavorable).">Impacto en NPS <b>${pp(s.mov, 1)}</b></span>`}</div>
+        <div class="bar"><span style="width:${s.fav ?? 0}%;background:${c}"></span></div></div>`;
+    }).join('') + '</div></div>').join('');
+
+  const pts = st.filter(s => !s.info && s.imp != null && s.n >= MIN_N);
+  const mx = pts.length ? pts.reduce((a, s) => a + s.fav, 0) / pts.length : 50;
+  const my = pts.length ? pts.reduce((a, s) => a + s.mov, 0) / pts.length : 10;
+  chart('c-drivers', {
+    grid:{left:46, right:26, top:20, bottom:40},
+    tooltip:{...TOOLTIP, formatter:p => `<b>${p.data.name}</b><br>Favorable: ${fmt(p.value[0])}%<br>Impacto en NPS (techo): ${pp(p.value[1])}<br>Brecha favorable vs. no: ${pp(p.data.imp)}<br>Desfavorables: ${p.data.nNo.toLocaleString('es-CO')}`},
+    xAxis:{type:'value', name:'Desempeño (% favorable)', nameLocation:'middle', nameGap:26, nameTextStyle:{color:COL.steel, fontSize:11}, scale:true, ...AX, axisLabel:{...AX.axisLabel, formatter:'{value}%'}},
+    yAxis:{type:'value', name:'Impacto en NPS (pp)', nameLocation:'middle', nameGap:32, nameTextStyle:{color:COL.steel, fontSize:11}, scale:true, ...AX},
+    series:[{type:'scatter', symbolSize:d => 10 + Math.sqrt(d[2]) * .9,
+      data:pts.map(s => ({name:s.label, nNo:s.nNo, imp:s.imp, value:[+s.fav.toFixed(1), +s.mov.toFixed(1), s.nNo],
+        itemStyle:{color:s.fav < mx && s.mov > my ? COL.red : s.mov > my ? COL.ink : COL.soft, opacity:.9},
+        label:{position:s.fav > mx ? 'left' : 'right'}})),
+      label:{show:true, formatter:p => p.name, fontSize:11, color:COL.ink},
+      labelLayout:{hideOverlap:false, moveOverlap:'shiftY'},
+      markLine:{silent:true, symbol:'none', lineStyle:{color:COL.line, type:'dashed'}, label:{show:false}, data:[{xAxis:mx}, {yAxis:my}]},
+      markArea:{silent:true, itemStyle:{color:'rgba(218,16,26,.05)'}, data:[[{xAxis:'min', yAxis:my}, {xAxis:mx, yAxis:'max'}]]}}],
+  });
+
+  const buckets = ['0', '1', '2', '3+'], groups = [[], [], [], []];
+  for (const r of rs) groups[Math.min(3, frictions(r))].push(r);
+  chart('c-fric', {
+    grid:{left:40, right:12, top:24, bottom:40},
+    tooltip:{...TOOLTIP, formatter:p => `${p.name} fricciones<br>NPS <b>${fmt(p.value)}%</b> · n ${groups[p.dataIndex].length.toLocaleString('es-CO')}`},
+    xAxis:{type:'category', data:buckets, name:'Fricciones en el recorrido', nameLocation:'middle', nameGap:26, nameTextStyle:{color:COL.steel, fontSize:11}, ...AX},
+    yAxis:{type:'value', ...AX, min:v => Math.floor(v.min / 20) * 20 - 20},
+    series:[{type:'bar', barWidth:'52%', data:groups.map(g => { const v = g.length >= MIN_N ? +npsOf(g).toFixed(1) : null;
+        return {value:v, itemStyle:{color:npsColor(v, false)}, label:{position:v < 0 ? 'bottom' : 'top'}}; }),
+      label:{show:true, lineHeight:15, fontFamily:'Nunito Sans', fontWeight:700, fontSize:11, color:COL.ink,
+        formatter:p => `${fmt(p.value)}%\n{n|n ${groups[p.dataIndex].length}}`, rich:{n:{fontSize:9.5, color:COL.soft, fontWeight:400, fontFamily:'Nunito Sans', lineHeight:15}}}}],
+  });
+}
+
+// ---------- constelación ----------
+// Árbol centro → nivel 1 → nivel 2 → nivel 3 en órbitas. Arranca con el indicador y los elementos más grandes del
+// nivel 1, que giran despacio alrededor del centro; un clic abre la rama en abanico (y cierra las demás) y el centro
+// lo cierra todo. Cada punto guarda su ángulo y su órbita, que se interpolan cuadro a cuadro; la cámara encuadra
+// lo visible para usar todo el lienzo.
+const TOP1 = 6, TOPN = 10, MIN_HIJO = 3;
+const RING = [0, .46, .78, 1.02], SPREAD = [0, 0, 2.4, 1.8], STEP = [0, 0, .3, .22];
+const VUELTA = 2 * Math.PI / 240;   // giro en reposo: una vuelta cada 4 minutos
+const QUIETO = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let SKY_OPEN = new Set(), SKY_ALL = false, SKY_IDX = new Map();
+const SKY = {svg:null, sp:new Map(), parts:[], orbs:[], rot:-Math.PI / 2, cam:null, camT:null, raf:0, t:0, pausa:false, foco:null, W:0, H:0, RX:1, RY:1};
+const skyPop = (rs, cfg) => rs.filter(r => cfg.groups.some(g => r[g.f] != null));
+const tono = e => POS.has(e) ? 'Positivas' : NEG.has(e) ? 'Negativas' : 'Neutras';
+const skyReset = () => { SKY_OPEN = new Set(); SKY_ALL = false; NODE_SEL = null; };
+const svgEl = (tag, attrs, parent) => { const e = document.createElementNS('http://www.w3.org/2000/svg', tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; };
+const giro = (a, b) => ((a - b + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;   // diferencia angular más corta
+
+// agrupa las encuestas del padre por key(r): cada valor es un hijo (id con el del padre como prefijo)
+function kids(parent, key, kind, vb, tag = kind) {
+  const m = new Map();
+  for (const r of parent.rows) { const v = key(r); if (v != null) (m.get(v) || m.set(v, []).get(v)).push(r); }
+  return [...m].map(([v, rows]) => ({id:`${parent.id}>${tag}:${v}`, disp:v, kind, vb, rows, parent}))
+    .sort((a, b) => b.rows.length - a.rows.length);
+}
+
+// «Motivos» muestra solo motivos y «Emociones» solo emociones
+function skyTree(rs, cfg, mode) {
+  const root = {id:'c', disp:cfg.label, kind:'center', rows:rs};
+  if (mode === 'emociones') {
+    // tono → emoción
+    root.rows = skyPop(rs, cfg).filter(r => r.e10);
+    root.children = kids(root, r => tono(r.e10), 'hub', 'proc');
+    for (const h of root.children) h.children = kids(h, r => r.e10, 'emoción', 'proc');
+    root.rows = rs;
+  } else if (!cfg.groups[0].hub) {
+    // NPS: la pregunta 11.2 no tiene submotivo
+    const g = cfg.groups[0];
+    root.children = kids(root, r => r[g.f], 'motivo', g.vb);
+  } else {
+    // SAT / CES: grupo → motivo → submotivo
+    root.children = cfg.groups.map(g => {
+      const h = {id:'h:' + g.hub, disp:g.hub, kind:'hub', vb:g.vb, parent:root, rows:rs.filter(r => r[g.f] != null)};
+      h.children = kids(h, r => r[g.f], 'motivo', g.vb);
+      if (g.sub) for (const m of h.children) m.children = kids(m, r => r[g.sub], 'submotivo', g.vb);
+      return h;
+    }).filter(h => h.rows.length).sort((a, b) => b.rows.length - a.rows.length);
+  }
+  SKY_IDX = new Map();
+  const walk = n => { SKY_IDX.set(n.id, n); (n.children || []).forEach(walk); };
+  walk(root);
+  return root;
+}
+
+const openable = n => (n.children || []).some(k => k.rows.length >= MIN_HIJO);
+
+// destino de cada punto visible en polares (ángulo, órbita): nivel 1 repartido alrededor del centro y los hijos
+// de una rama abierta en abanico hacia afuera, en la dirección de su padre
+function skyTargets(root) {
+  const out = [{n:root, a:0, d:0, depth:0}];
+  let l1 = root.children.filter(k => k.rows.length >= MIN_HIJO);
+  if (!SKY_ALL && l1.length > TOP1 + 1) {
+    const rest = l1.slice(TOP1);
+    l1 = [...l1.slice(0, TOP1), {id:'mas', disp:`+${rest.length} más`, kind:'mas', rows:[], n:rest.reduce((a, k) => a + k.rows.length, 0)}];
+  }
+  // la rama abierta gira hasta quedar a la derecha (ángulo 0), donde hay más espacio; sin rama abierta, todo orbita
+  const io = l1.findIndex(k => SKY_OPEN.has(k.id));
+  if (io >= 0) SKY.rot = -2 * Math.PI * io / l1.length;
+  const open = (n, a, depth) => {
+    if (!SKY_OPEN.has(n.id) || depth > 3) return;
+    const ks = n.children.filter(k => k.rows.length >= MIN_HIJO).slice(0, TOPN);
+    const span = Math.min(SPREAD[depth], STEP[depth] * (ks.length - 1));
+    ks.forEach((k, i) => {
+      const ak = a + (ks.length > 1 ? -span / 2 + span * i / (ks.length - 1) : 0);
+      out.push({n:k, a:ak, d:RING[depth], depth, parent:n.id});
+      open(k, ak, depth + 1);
+    });
+  };
+  l1.forEach((k, i) => {
+    const base = 2 * Math.PI * i / l1.length;
+    out.push({n:k, a:base + SKY.rot, base, d:RING[1], depth:1, parent:'c', orbita:io < 0});
+    open(k, base + SKY.rot, 2);
+  });
+  return out;
+}
+
+// rótulo en dos líneas como máximo
+function lineas(t, max = 22) {
+  const out = [''];
+  for (const w of t.split(' ')) { const l = out.at(-1); if (l && (l + ' ' + w).length > max) out.push(w); else out[out.length - 1] = l ? l + ' ' + w : w; }
+  return out.length > 2 ? [out[0], out.slice(1).join(' ').slice(0, max - 1) + '…'] : out;
+}
+
+function skyInit() {
+  SKY.svg = document.getElementById('c-sky');
+  SKY.g = {};
+  for (const k of ['estrellas', 'orbitas', 'enlaces', 'particulas', 'nodos']) SKY.g[k] = svgEl('g', {class:k}, SKY.svg);
+  SKY.tip = document.getElementById('tip');
+  new ResizeObserver(() => { if (SKY.svg.clientWidth) { skyStars(); skyFit(); skyRun(); } }).observe(SKY.svg);
+}
+
+function skyStars() {
+  const W = SKY.svg.clientWidth, H = SKY.svg.clientHeight;
+  if (W === SKY.W && H === SKY.H) return;
+  SKY.W = W; SKY.H = H;
+  const R = Math.random;
+  SKY.g.estrellas.innerHTML = Array.from({length:Math.round(W * H / 6500)}, () =>
+    `<circle class="astro" cx="${(R() * W).toFixed(1)}" cy="${(R() * H).toFixed(1)}" r="${(.3 + R() ** 3 * 1.2).toFixed(2)}" style="animation-duration:${(2.5 + R() * 4).toFixed(1)}s;animation-delay:-${(R() * 6).toFixed(1)}s"/>`).join('');
+}
+
+function skyTip(e, s) {
+  const n = s.n, t = SKY.tip;
+  t.innerHTML = n.kind === 'center' ? `<b>${esc(n.disp)} ${fmtI(CONST_K, s.nps)}</b><br>${n.rows.length.toLocaleString('es-CO')} encuestas · clic para cerrar todo`
+    : n.kind === 'mas' ? `<b>${esc(n.disp)}</b><br>${s.nn.toLocaleString('es-CO')} menciones · clic para verlos`
+    : `<b>${esc(n.disp)}</b><br>${s.nn.toLocaleString('es-CO')} menciones · NPS <b>${fmt(s.nps)}%</b>${openable(n) ? '<br>Clic para abrir' : ''}`;
+  t.hidden = false;
+  const r = t.getBoundingClientRect();
+  t.style.left = Math.min(e.clientX + 14, innerWidth - r.width - 8) + 'px';
+  t.style.top = Math.max(8, e.clientY - r.height - 12) + 'px';
+}
+
+// contenido de un punto: se rehace en cada dibujo porque tamaño, color y signo +/− cambian con los filtros
+function skyNodo(s, indV) {
+  const n = s.n, c = s.color, r = s.r;
+  const mark = n.kind === 'center' || n.kind === 'mas' || !openable(n) ? '' : SKY_OPEN.has(n.id) ? '  −' : '  +';
+  s.lin = n.kind === 'center' || n.kind === 'mas' ? [] : lineas(n.disp + mark);
+  let h;
+  if (n.kind === 'center') h = `<circle class="onda" r="${r}"/><circle class="onda" r="${r}"/><circle class="halo" r="${r * 1.6}" fill="${c}" opacity=".22"/>
+    <circle class="cuerpo" r="${r}" fill="${c}" stroke="#fff" stroke-width="2"/><text class="centro-v" y="3">${esc(fmtI(CONST_K, indV))}</text><text class="centro-k" y="17">${esc(n.disp)}</text>`;
+  else if (n.kind === 'mas') h = `<circle class="cuerpo" r="${r}" fill="#1D2027" stroke="#8B93A1" stroke-width="1.5" stroke-dasharray="3 3"/><text class="centro-k" y="3">${esc(n.disp)}</text>`;
+  else {
+    const q = r * 1.2, forma = n.kind === 'emoción' ? `<path class="cuerpo" d="M0 ${-q}L${q} 0L0 ${q}L${-q} 0Z" fill="${c}"/>`
+      : n.kind === 'hub' ? `<circle class="cuerpo" r="${r}" fill="#1D2027" stroke="${c}" stroke-width="2.5"/>` : `<circle class="cuerpo" r="${r}" fill="${c}"/>`;
+    h = `<circle class="halo" r="${r * 2.1}" fill="${c}" opacity=".15"/>${forma}<text class="rotulo">${s.lin.map(l => `<tspan>${esc(l)}</tspan>`).join('')}</text>`;
+  }
+  s.g.innerHTML = h;
+  s.g.setAttribute('class', `nodo k-${n.kind === 'emoción' ? 'emocion' : n.kind}${s.id === NODE_SEL ? ' sel' : ''}`);
+  s.g.setAttribute('aria-label', n.kind === 'center' ? `${n.disp}: cerrar todo` : `${n.disp}: ${s.nn} menciones`);
+  s.lado = null;
+}
+
+function skyDraw(root, rs) {
+  if (!SKY.svg) skyInit();
+  // color relativo al rango de la constelación (quien da un motivo de SAT o CES ya está insatisfecho)
+  const vals = [...SKY_IDX.values()].filter(n => n.kind !== 'center' && n.rows.length >= 10).map(n => npsOf(n.rows));
+  const lo = vals.length ? Math.min(...vals) : -60, hi = vals.length ? Math.max(...vals) : 60;
+  const tone = v => npsColor(hi > lo ? -60 + (v - lo) / (hi - lo) * 120 : 0);
+  document.getElementById('sky-lo').textContent = fmt(lo, 0) + '%';
+  document.getElementById('sky-hi').textContent = fmt(hi, 0) + '%';
+
+  const maxN = Math.max(...root.children.map(k => k.rows.length), 1), indV = calc(CONST_K, rs).v, vivos = new Set();
+  for (const t of skyTargets(root)) {
+    const n = t.n, nn = n.kind === 'mas' ? n.n : n.rows.length;
+    let s = SKY.sp.get(n.id);
+    if (!s) {
+      // un punto nuevo nace donde está su padre y se despliega hasta su órbita
+      const p = SKY.sp.get(t.parent);
+      s = {id:n.id, a:p ? p.a : t.a, d:p ? p.d : 0, al:0, fase:Math.random() * 6.3, w:.4 + Math.random() * .5};
+      s.g = svgEl('g', {tabindex:0, role:'button'}, SKY.g.nodos);
+      if (t.parent) s.ln = svgEl('line', {class:'enlace'}, SKY.g.enlaces);
+      s.g.addEventListener('click', () => skyClick(s.id));
+      s.g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); skyClick(s.id); } });
+      s.g.addEventListener('pointerenter', e => { SKY.pausa = true; SKY.foco = s.id; skyTip(e, s); skyRun(); });
+      s.g.addEventListener('pointermove', e => skyTip(e, s));
+      s.g.addEventListener('pointerleave', () => { SKY.pausa = false; SKY.foco = null; SKY.tip.hidden = true; skyRun(); });
+      SKY.sp.set(n.id, s);
+    }
+    Object.assign(s, {n, nn, parent:t.parent, depth:t.depth, ta:t.a, td:t.d, base:t.base, orbita:!!t.orbita, tal:1, muere:false,
+      nps:npsOf(n.rows), color:n.kind === 'center' ? COL.red : n.kind === 'mas' ? '#5B6472' : tone(npsOf(n.rows)),
+      r:(n.kind === 'center' ? 66 : n.kind === 'mas' ? 40 : n.kind === 'hub' ? 30 + Math.sqrt(nn / maxN) * 26 : 9 + Math.sqrt(nn / maxN) * 44) / 2});
+    skyNodo(s, indV);
+    vivos.add(n.id);
+  }
+  // lo que ya no se ve vuelve hacia su ancestro visible más cercano y se apaga
+  for (const s of SKY.sp.values()) if (!vivos.has(s.id)) {
+    let p = SKY.sp.get(s.parent);
+    while (p && !vivos.has(p.id)) p = SKY.sp.get(p.parent);
+    Object.assign(s, {muere:true, tal:0, orbita:false, ta:p ? p.ta : s.a, td:p ? p.td : 0});
+    s.g.removeAttribute('tabindex');
+    if (SKY.foco === s.id) { SKY.foco = null; SKY.pausa = false; SKY.tip.hidden = true; }   // un punto que se va no avisa que el puntero salió
+  }
+  // partículas: viajan de cada punto hacia su padre, más mientras más menciones
+  SKY.g.particulas.innerHTML = '';
+  SKY.parts = [];
+  if (!QUIETO) for (const s of SKY.sp.values()) if (!s.muere && s.parent) {
+    const k = Math.max(1, Math.min(5, Math.round(Math.sqrt(s.nn) / 5)));
+    for (let i = 0; i < k; i++) SKY.parts.push({s, f:i / k + Math.random() * .15, v:.12 + Math.random() * .1, e:svgEl('circle', {r:1.7, fill:s.color}, SKY.g.particulas)});
+  }
+  SKY.g.orbitas.innerHTML = '';
+  SKY.orbs = [...new Set([...SKY.sp.values()].filter(s => !s.muere && s.depth).map(s => s.td))].map(d => ({d, e:svgEl('ellipse', {class:'orbita'}, SKY.g.orbitas)}));
+}
+
+// escala y centro para que los puntos (mundo) y sus rótulos (píxeles) quepan en la caja x0..x1, y0..y1
+function encuadre(pts, x0, x1, y0, y1) {
+  const span = (s, c, lo, hi) => Math.max(...pts.map(p => s * p[c] + p[hi])) - Math.min(...pts.map(p => s * p[c] - p[lo]));
+  const maxS = (c, lo, hi, room) => { let a = .05, b = 3; for (let i = 0; i < 28; i++) { const m = (a + b) / 2; span(m, c, lo, hi) <= room ? a = m : b = m; } return a; };
+  const s = Math.min(maxS('x', 'izq', 'der', x1 - x0), maxS('y', 'arr', 'aba', y1 - y0));
+  return {s, ox:x0 + (x1 - x0 - span(s, 'x', 'izq', 'der')) / 2 - Math.min(...pts.map(p => s * p.x - p.izq)),
+             oy:y0 + (y1 - y0 - span(s, 'y', 'arr', 'aba')) / 2 - Math.min(...pts.map(p => s * p.y - p.arr))};
+}
+
+function skyFit() {
+  const W = SKY.svg.clientWidth, H = SKY.svg.clientHeight;
+  if (!W) return;
+  const pan = document.getElementById('panel'), flota = getComputedStyle(pan).position === 'absolute';
+  const x0 = 28, x1 = W - 28 - (flota ? pan.offsetWidth + 16 : 0), y0 = 66, y1 = H - 40;
+  SKY.RX = (x1 - x0) / 2; SKY.RY = (y1 - y0) / 2;
+  const ext = (s, a) => {
+    // en pantallas angostas el rótulo puede cortarse antes que encoger la constelación hasta el centro
+    const lw = s.lin.length ? Math.min(160, (x1 - x0) * .2, Math.max(...s.lin.map(l => l.length)) * (s.n.kind === 'hub' ? 7.6 : 6.5)) + 10 : 0;
+    const izq = Math.cos(a) < -.2, v = Math.max(s.r, s.lin.length * 8) + 6;
+    return {izq:s.r + 6 + (izq ? lw : 0), der:s.r + 6 + (izq ? 0 : lw), arr:v, aba:v};
+  };
+  const pts = [];
+  for (const s of SKY.sp.values()) if (!s.muere) {
+    // lo que orbita cuenta con la órbita completa, así la cámara queda quieta mientras gira
+    const angs = s.orbita ? Array.from({length:24}, (_, i) => i / 12 * Math.PI) : [s.ta];
+    for (const a of angs) pts.push({x:s.td * Math.cos(a) * SKY.RX, y:s.td * Math.sin(a) * SKY.RY, ...ext(s, a)});
+  }
+  SKY.camT = encuadre(pts, x0, x1, y0, y1);
+  if (!SKY.cam) SKY.cam = {...SKY.camT};
+}
+
+function skyRun() { if (!SKY.raf) SKY.raf = requestAnimationFrame(skyLoop); }
+
+function skyLoop(now) {
+  SKY.raf = 0;
+  if (VIEW !== 'constelacion' || !SKY.cam) return;
+  const dt = SKY.t ? Math.min(.05, (now - SKY.t) / 1000) : 0;
+  SKY.t = now;
+  if (!QUIETO && !SKY.pausa && !SKY_OPEN.size) SKY.rot += dt * VUELTA;
+  const k = QUIETO ? 1 : 1 - Math.exp(-dt * 5), c = SKY.cam, T = SKY.camT;
+  for (const p of ['s', 'ox', 'oy']) c[p] += (T[p] - c[p]) * k;
+  const fo = SKY.foco && SKY.sp.get(SKY.foco);
+  const cerca = s => !fo || s === fo || s.parent === fo.id || fo.parent === s.id;
+  for (const s of SKY.sp.values()) {
+    if (s.orbita) s.ta = s.base + SKY.rot;
+    s.a += giro(s.ta, s.a) * k; s.d += (s.td - s.d) * k; s.al += (s.tal - s.al) * k;
+    if (s.muere && s.al < .03) { s.g.remove(); s.ln?.remove(); SKY.sp.delete(s.id); continue; }
+    // flotación: cada punto respira un poco sobre su órbita
+    const f = QUIETO || !s.depth ? 0 : Math.sin(now / 1000 * s.w + s.fase), d = s.d * (1 + .02 * f), a = s.a + .01 * f;
+    s.x = c.ox + c.s * d * Math.cos(a) * SKY.RX; s.y = c.oy + c.s * d * Math.sin(a) * SKY.RY;
+    s.dim = cerca(s) ? 1 : .22;
+    s.g.setAttribute('transform', `translate(${s.x.toFixed(1)},${s.y.toFixed(1)})`);
+    s.g.style.opacity = (s.al * s.dim).toFixed(3);
+    const izq = Math.cos(s.a) < -.2;
+    if (s.lin.length && s.lado !== izq) {
+      s.lado = izq;
+      const t = s.g.querySelector('.rotulo'), x = (izq ? -1 : 1) * (s.r * (s.n.kind === 'emoción' ? 1.2 : 1) + 7);
+      t.setAttribute('text-anchor', izq ? 'end' : 'start');
+      [...t.children].forEach((sp, i, all) => { sp.setAttribute('x', x); sp.setAttribute('y', ((i - (all.length - 1) / 2) * 14 + 4).toFixed(1)); });
+    }
+  }
+  const centro = SKY.sp.get('c');
+  for (const s of SKY.sp.values()) if (s.ln) {
+    const p = SKY.sp.get(s.parent) || centro;
+    s.ln.setAttribute('x1', p.x.toFixed(1)); s.ln.setAttribute('y1', p.y.toFixed(1));
+    s.ln.setAttribute('x2', s.x.toFixed(1)); s.ln.setAttribute('y2', s.y.toFixed(1));
+    s.ln.setAttribute('stroke-width', Math.min(6, .8 + Math.sqrt(s.nn) * .3).toFixed(1));
+    s.ln.setAttribute('stroke-opacity', (.26 * s.al * (fo && s.dim === 1 && (s === fo || s.parent === fo.id) ? 2.6 : s.dim)).toFixed(3));
+  }
+  for (const p of SKY.parts) {
+    const s = p.s, q = SKY.sp.get(s.parent) || centro;
+    if (!SKY.sp.has(s.id) || !q) continue;
+    p.f = (p.f + dt * p.v) % 1;
+    p.e.setAttribute('cx', (s.x + (q.x - s.x) * p.f).toFixed(1)); p.e.setAttribute('cy', (s.y + (q.y - s.y) * p.f).toFixed(1));
+    p.e.setAttribute('opacity', (Math.sin(Math.PI * p.f) * .9 * s.al * s.dim).toFixed(3));
+  }
+  for (const o of SKY.orbs) {
+    o.e.setAttribute('cx', c.ox.toFixed(1)); o.e.setAttribute('cy', c.oy.toFixed(1));
+    o.e.setAttribute('rx', (c.s * o.d * SKY.RX).toFixed(1)); o.e.setAttribute('ry', (c.s * o.d * SKY.RY).toFixed(1));
+  }
+  if (!QUIETO) SKY.raf = requestAnimationFrame(skyLoop);
+}
+
+function skyClick(id) {
+  if (id === 'c') skyReset();
+  else if (id === 'mas') SKY_ALL = true;
+  else {
+    const n = SKY_IDX.get(id);
+    NODE_SEL = id;
+    if (openable(n)) {
+      if (SKY_OPEN.has(id)) SKY_OPEN = new Set([...SKY_OPEN].filter(k => k !== id && !k.startsWith(id + '>')));
+      else { SKY_OPEN = new Set(); for (let a = n; a && a.kind !== 'center'; a = a.parent) SKY_OPEN.add(a.id); }
+    }
+  }
+  vConst(filt());
+}
+
+function vConst(rs) {
+  picker('p-const', CONST_K, Object.entries(CONST).map(([k, c]) => [k, c.label]), k => { CONST_K = k; skyReset(); render(); });
+  picker('p-mode', SKY_MODE, [['motivos', 'Motivos'], ['emociones', 'Emociones']], m => { SKY_MODE = m; skyReset(); render(); });
+  const cfg = CONST[CONST_K];
+  document.getElementById('sky-size').textContent = `${SKY_MODE === 'emociones' ? '◆' : '●'} tamaño = menciones · color = NPS de quienes lo dicen`;
+  const root = skyTree(rs, cfg, SKY_MODE);
+  skyDraw(root, rs);
+  panel(SKY_IDX.get(NODE_SEL) || root, rs, cfg);
+  skyFit();
+  skyRun();
+}
+
+function quotes(rows, vb, max = 8) {
+  const seen = new Set(), out = [];
+  for (const r of [...rows].sort((a, b) => a.nps - b.nps)) {
+    const t = r.v && (r.v[vb] || r.v.nps); if (!t || seen.has(t)) continue;
+    seen.add(t); out.push(`<div class="quote ${segCls(r.nps)}">${esc(t)}<small>NPS ${r.nps} · ${mc(r.mes)} · ${esc(r.region || 'Sin región')}</small></div>`);
+    if (out.length >= max) break;
+  }
+  return out.join('') || '<p class="note">No hay comentarios para este punto.</p>';
+}
+function panel(n, rs, cfg) {
+  const el = document.getElementById('panel'), emo = SKY_MODE === 'emociones';
+  const kind = {center:'Indicador', hub:emo ? 'Emociones' : 'Grupo', motivo:'Motivo', submotivo:'Submotivo', 'emoción':'Emoción'}[n.kind]
+    + (n.parent && n.parent.kind !== 'center' ? ` · ${esc(n.parent.disp)}` : '');
+  const bm = byMonth(n.rows), tot = npsOf(rs), v = npsOf(n.rows);
+  // mezcla de detractores y promotores para que el panel no muestre solo un extremo
+  const det = n.rows.filter(r => r.nps <= 6), pro = n.rows.filter(r => r.nps >= 9);
+  const conMotivo = emo ? skyPop(rs, cfg).filter(r => r.e10).length : skyPop(rs, cfg).length;
+  const ayuda = emo ? `Emociones que nombraron ${cfg.quien}, agrupadas en positivas, neutras y negativas.` : cfg.help;
+  el.innerHTML = `<div><span class="kind">${kind}</span><h3>${esc(n.disp)}</h3></div>
+    <div class="stats">${n.kind === 'center' ? `
+      <div class="stat"><div class="k">Encuestas</div><div class="v">${rs.length.toLocaleString('es-CO')}</div></div>
+      <div class="stat"><div class="k">${IND[CONST_K].label}</div><div class="v">${fmtI(CONST_K, calc(CONST_K, rs).v)}</div></div>
+      <div class="stat"><div class="k">${emo ? 'Nombraron una emoción' : 'Dieron un motivo'}</div><div class="v">${conMotivo.toLocaleString('es-CO')}</div></div>
+      <div class="stat"><div class="k">% de las encuestas</div><div class="v">${fmt(pct(conMotivo, rs.length))}%</div></div>
+    </div>` : `
+      <div class="stat"><div class="k">Menciones</div><div class="v">${n.rows.length.toLocaleString('es-CO')}</div></div>
+      <div class="stat"><div class="k">% de las encuestas</div><div class="v">${fmt(pct(n.rows.length, rs.length))}%</div></div>
+      <div class="stat"><div class="k">NPS de quienes lo dicen</div><div class="v" style="color:${npsColor(v)}">${fmt(v)}%</div></div>
+      <div class="stat"><div class="k">Frente al NPS filtrado</div><div class="v">${pp(v - tot)}</div></div>
+    </div>`}
+    <div><div class="note" style="margin:0 0 2px">Menciones por mes</div><div class="chart" id="c-node" style="height:90px"></div></div>
+    <div style="display:flex;flex-direction:column;gap:8px">${n.kind === 'center' ? `<p class="note" style="margin:0">${esc(ayuda)} Haz clic en un punto para abrirlo y ver sus comentarios.</p>` : quotes([...det.slice(0, 40), ...pro.slice(0, 20), ...n.rows], n.vb || 'nps')}</div>`;
+  chart('c-node', {
+    grid:{left:4, right:4, top:14, bottom:18},
+    tooltip:{...TOOLTIP, formatter:p => `${ml(META.meses[p.dataIndex])}: ${p.value} menciones`},
+    xAxis:{type:'category', data:META.meses.map(mc), ...AX, axisLine:{lineStyle:{color:'rgba(255,255,255,.14)'}}, axisLabel:{...AX.axisLabel, fontSize:9, color:'#8B93A1'}}, yAxis:{type:'value', show:false},
+    series:[{type:'bar', barWidth:'55%', itemStyle:{color:COL.red, borderRadius:[2, 2, 0, 0]}, data:META.meses.map(m => bm[m].length),
+      label:{show:true, position:'top', fontSize:9, color:'#C3C8D0', fontFamily:'Nunito Sans'}}],
+  });
+}
+
+// ---------- voz ----------
+let VB_MOT = '', VB_SEG = '', MOT_SEG = 'Detractor';
+// segmentos que se pueden elegir en motivos y comentarios ('ambos' = neutros y detractores)
+const SEGS = {Detractor:['Detractor'], Neutro:['Neutro'], ambos:['Detractor', 'Neutro'], Promotor:['Promotor']};
+const SEG_TXT = {Detractor:'los detractores', Neutro:'los neutros', ambos:'neutros y detractores'};
+const SEG_COL = {Detractor:COL.red, Neutro:COL.amber};
+function vVoz(rs) {
+  // emociones por aspecto del proceso
+  const asp = [...count(rs, r => r.e10 && r.a10)].filter(x => x[1] >= 15).map(([a]) => {
+    const s = rs.filter(r => r.a10 === a && r.e10), neg = s.filter(r => NEG.has(r.e10)).length, pos = s.filter(r => POS.has(r.e10)).length;
+    return {a, n:s.length, neg:pct(neg, s.length), pos:pct(pos, s.length)};
+  }).sort((x, y) => (x.pos - x.neg) - (y.pos - y.neg));
+  chart('c-emo', {
+    grid:{left:170, right:40, top:24, bottom:26},
+    legend:{top:0, right:0, itemWidth:10, itemHeight:10, textStyle:{color:COL.steel, fontSize:11}},
+    tooltip:{...TOOLTIP, trigger:'axis', axisPointer:{type:'shadow'}, formatter:ps => `${ps[0].name} (n ${asp[ps[0].dataIndex].n})<br>` + ps.map(p => `${p.seriesName}: ${fmt(Math.abs(p.value))}%`).join('<br>')},
+    xAxis:{type:'value', min:-100, max:100, ...AX, axisLabel:{...AX.axisLabel, formatter:v => Math.abs(v) + '%'}},
+    yAxis:{type:'category', data:asp.map(x => x.a), ...AX, axisLine:{show:false}, axisLabel:{...AX.axisLabel, fontFamily:'Nunito Sans', fontSize:11.5, color:COL.ink, width:160, overflow:'truncate'}},
+    series:[
+      {name:'Negativas', type:'bar', stack:'e', barWidth:14, itemStyle:{color:COL.red}, data:asp.map(x => -x.neg.toFixed(1)),
+       label:{show:true, position:'left', formatter:p => p.value ? fmt(-p.value, 0) : '', fontSize:10, fontFamily:'Nunito Sans', color:COL.steel}},
+      {name:'Positivas', type:'bar', stack:'e', barWidth:14, itemStyle:{color:COL.green}, data:asp.map(x => +x.pos.toFixed(1)),
+       label:{show:true, position:'right', formatter:p => p.value ? fmt(p.value, 0) : '', fontSize:10, fontFamily:'Nunito Sans', color:COL.steel}},
+    ],
+  });
+
+  // motivos del segmento elegido (detractores, neutros o ambos, apilados)
+  picker('p-motseg', MOT_SEG, [['Detractor', 'Detractores'], ['Neutro', 'Neutros'], ['ambos', 'Ambos']], k => { MOT_SEG = k; VB_MOT = ''; vVoz(filt()); });
+  document.getElementById('mot-title').textContent = `Motivos de ${SEG_TXT[MOT_SEG]}`;
+  const segs = SEGS[MOT_SEG], base = rs.filter(r => segs.includes(segOf(r.nps)));
+  const mot = [...count(base, r => r.m112)].sort((x, y) => y[1] - x[1]).slice(0, 10).map(m => m[0]);
+  const by = (m, sg) => base.filter(r => r.m112 === m && segOf(r.nps) === sg).length;
+  chart('c-det', {
+    grid:{left:170, right:60, top:segs.length > 1 ? 26 : 6, bottom:6},
+    legend:{show:segs.length > 1, top:0, right:0, itemWidth:10, itemHeight:10, textStyle:{color:COL.steel, fontSize:11}},
+    tooltip:{...TOOLTIP, trigger:'axis', axisPointer:{type:'shadow'},
+      formatter:ps => `${ps[0].name}<br>` + ps.map(p => `${p.seriesName}: ${p.value} (${fmt(pct(p.value, base.length))}%)`).join('<br>')},
+    xAxis:{type:'value', show:false}, yAxis:{type:'category', inverse:true, data:mot, ...AX, axisLine:{show:false},
+      axisLabel:{...AX.axisLabel, fontFamily:'Nunito Sans', fontSize:11.5, color:COL.ink, width:160, overflow:'truncate'}},
+    series:segs.map((sg, i) => ({name:sg === 'Detractor' ? 'Detractores' : 'Neutros', type:'bar', stack:'m', barWidth:13, itemStyle:{color:SEG_COL[sg]},
+      data:mot.map(m => ({value:by(m, sg), itemStyle:{color:SEG_COL[sg], opacity:VB_MOT && VB_MOT !== m ? .3 : 1}})),
+      label:{show:i === segs.length - 1, position:'right', fontFamily:'Nunito Sans', fontSize:10.5, color:COL.steel,
+        formatter:p => `${fmt(pct(segs.reduce((a, g) => a + by(p.name, g), 0), base.length), 0)}%`}})),
+  }, p => { VB_MOT = VB_MOT === p.name ? '' : p.name; VB_SEG = VB_MOT ? MOT_SEG : ''; VB_LIMIT = 40; vVoz(filt()); });
+
+  // comentarios
+  const sel = document.getElementById('v-mot');
+  const mots = [...count(rs, r => r.m112)].sort((x, y) => y[1] - x[1]);
+  sel.innerHTML = '<option value="">Todos los motivos</option>' + mots.map(([m, n]) => `<option value="${esc(m)}">${esc(m)} (${n})</option>`).join('');
+  sel.value = VB_MOT;
+  sel.onchange = () => { VB_MOT = sel.value; VB_LIMIT = 40; vVoz(filt()); };
+  const ss = document.getElementById('v-seg');
+  ss.innerHTML = [['', 'Todos los segmentos'], ['Promotor', 'Promotores'], ['Neutro', 'Neutros'], ['Detractor', 'Detractores'], ['ambos', 'Neutros y detractores']]
+    .map(([v, t]) => `<option value="${v}">${t}</option>`).join('');
+  ss.value = VB_SEG;
+  ss.onchange = () => { VB_SEG = ss.value; VB_LIMIT = 40; listVerb(rs); };
+  const qi = document.getElementById('v-q');
+  qi.oninput = () => { VB_LIMIT = 40; listVerb(rs); };
+  listVerb(rs);
+}
+function listVerb(rs) {
+  const q = document.getElementById('v-q').value.trim().toLowerCase();
+  const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const nq = norm(q);
+  const list = rs.filter(r => r.v && (!VB_MOT || r.m112 === VB_MOT) && (!VB_SEG || SEGS[VB_SEG].includes(segOf(r.nps))) && (!nq || norm(Object.values(r.v).join(' ')).includes(nq)))
+    .sort((a, b) => b.mes.localeCompare(a.mes) || a.nps - b.nps);
+  const el = document.getElementById('vlist');
+  el.innerHTML = `<p class="note" style="margin:0 0 6px">${list.length.toLocaleString('es-CO')} encuestas con comentario</p>` +
+    list.slice(0, VB_LIMIT).map(r => {
+      const [main, ...rest] = Object.entries(r.v);
+      return `<div class="vrow"><div class="score ${segCls(r.nps)}" title="${segOf(r.nps)}">${r.nps}</div><div>
+        <div class="vmeta">${ml(r.mes)} ${r.fecha} · ${esc(r.region || 'Sin región')} · ${esc(r.neg)} ${esc(r.base)}${r.m112 ? ' · ' + esc(r.m112) : ''}</div>
+        <div class="vtext">${esc(main[1])}</div>
+        ${rest.map(([k, t]) => `<div class="vextra"><em>${VB_LABEL[k]}</em>${esc(t)}</div>`).join('')}</div></div>`;
+    }).join('') + (list.length > VB_LIMIT ? `<button class="more" id="v-more">Mostrar 40 más</button>` : '');
+  const more = document.getElementById('v-more');
+  if (more) more.onclick = () => { VB_LIMIT += 40; listVerb(rs); };
+}
+
+// ---------- arranque ----------
+document.querySelector('nav').onclick = e => {
+  const b = e.target.closest('.tab'); if (!b) return;
+  VIEW = b.dataset.view;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === b));
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'v-' + VIEW));
+  render();
+};
+
+// ---------- descarga de bases (lo mismo que alimenta el tablero, sin PII) ----------
+const COLS = {mes:'MES', fecha:'DIA_GESTION', neg:'TIPO_BASE', base:'BASE_ORIGEN', region:'REGION', ciudad:'CIUDAD', canal:'DES_CANAL',
+  p1:'P1_SATISFACCION_FACTURA', p2:'P2_FACILIDAD_ENTENDER', p3:'P3_VALORES_ACORDES_PLAN', p4:'P4_TIEMPO_SUFICIENTE_REVISAR',
+  p5:'P5_SATISFACCION_PAGO', p6:'P6_FACILIDAD_PAGO', p7:'P7_CLARIDAD_PAGO', p8:'P8_RECIBIO_RECORDATORIOS', p9:'P9_SATISFACCION_COBRO',
+  nps:'P11_RECOMENDACION_NPS', m11:'P1_1_MOTIVO_CALIF', m12:'P1_2_MOTIVO_CALIF', m21:'P2_1_DETALLE_DIFICIL', m31:'P3_1_CONCEPTOS_ERRONEOS',
+  m51:'P5_1_MOTIVO_CALIF', m61:'P6_1_DETALLE_DIFICIL', m71:'P7_1_ASPECTO_ERRADO_1', m72:'P7_2_MOTIVO_FALTA_CLARIDAD', m91:'P9_1_MOTIVO_CALIF',
+  a10:'P10_EMOCIONES_PROCESO', e10:'P10_2_EMOCIONES', m112:'P11_2_MOTIVO_CALIF'};
+const SINO_K = new Set(['p3', 'p4', 'p8']);
+function csvCelda(v) {
+  if (v == null) return '';
+  v = String(v);
+  if (/^[=+\-@]/.test(v)) v = "'" + v;  // que Excel no lo tome como fórmula
+  return /[;"\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+}
+function descargarBase(m) {
+  const rs = m ? ROWS.filter(r => r.mes === m) : ROWS;
+  const ks = Object.keys(COLS), vk = Object.keys(VB_LABEL);
+  const lineas = [[...ks.map(k => COLS[k]), ...vk.map(k => 'COMENTARIO_' + VB_LABEL[k].toUpperCase().replace(/ /g, '_'))].join(';')];
+  for (const r of rs) lineas.push([...ks.map(k => SINO_K.has(k) && r[k] != null ? (r[k] ? 'Si' : 'No') : r[k]), ...vk.map(k => r.v?.[k])].map(csvCelda).join(';'));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\ufeff' + lineas.join('\r\n')], {type:'text/csv;charset=utf-8'}));
+  a.download = `Base NPS Factura cobro y pago ${m || 'todos los meses'}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+document.getElementById('d-meses').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  descargarBase(b.dataset.m);
+  b.closest('details').open = false;
+};
+// las gráficas pintan en canvas: esperar las fuentes para que no salgan con la del sistema
+const FUENTES = Promise.all(['400 12px "Nunito Sans"', '800 12px "Nunito Sans"', '800 12px Nunito'].map(f => document.fonts.load(f))).catch(() => {});
+Promise.all([fetch('datos.json').then(r => r.json()), FUENTES]).then(([d]) => {
+  META = d.meta;
+  const [a, b, g] = [META.meses[0], META.meses.at(-1), META.generado];
+  document.getElementById('actualizado').textContent = `${g.slice(8, 10)}/${g.slice(5, 7)}/${g.slice(0, 4)}`;
+  VARIOS_ANIOS = META.meses[0].slice(0, 4) !== META.meses.at(-1).slice(0, 4);
+  const ci = Object.fromEntries(d.campos.map((c, i) => [c, i]));
+  const CAT = new Set(['neg', 'region', 'ciudad', 'base', 'canal', 'm11', 'm12', 'm21', 'm31', 'm51', 'm61', 'm71', 'm72', 'm91', 'a10', 'e10', 'm112']);
+  ROWS = d.filas.map(f => {
+    const o = {};
+    for (const [c, i] of Object.entries(ci)) o[c] = CAT.has(c) && f[i] != null ? d.dic[f[i]] : f[i];
+    return o;
+  });
+  document.getElementById('foot').innerHTML = `Encuestas 419 Hogar y 508 Móvil · <b>${META.n.toLocaleString('es-CO')}</b> encuestas efectivas, ${ml(a)} a ${ml(b)}${VARIOS_ANIOS ? '' : ' ' + b.slice(0, 4)}`;
+  document.getElementById('d-meses').innerHTML = [...META.meses].reverse().map(m => `<button type="button" data-m="${m}">${ml(m)}${VARIOS_ANIOS ? '' : ' ' + m.slice(0, 4)}</button>`).join('') + '<button type="button">Todos los meses</button>';
+  buildFilters();
+  render();
+}).catch(err => {
+  document.querySelector('.stage').innerHTML = `<p class="empty">No se pudo leer datos.json (${esc(err.message)}). Abre el tablero desde un servidor HTTP, no como archivo local.</p>`;
+});
+</script>
+</body>
+</html>
